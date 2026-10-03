@@ -44,53 +44,60 @@ interface ConstellationNode {
   pos: THREE.Vector3;
 }
 
-const MODERN_NODE_LAYOUT: Record<string, { x: number; y: number; delay: number }> = {
-  neo: { x: 18, y: 24, delay: 0 }, globe: { x: 50, y: 15, delay: 80 }, vega: { x: 82, y: 24, delay: 160 },
-  oracle: { x: 12, y: 55, delay: 240 }, odin: { x: 88, y: 55, delay: 320 }, chronos: { x: 29, y: 83, delay: 400 }, pulse: { x: 71, y: 83, delay: 480 },
-};
-
-function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart }: {
+function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart, onVoice }: {
   nodes: ConstellationNode[];
   agents: AgentConfig[];
   currentAgent: AgentConfig;
   onStart: (agentId: string) => void;
+  onVoice?: () => void;
 }) {
   const agentFor = (node: ConstellationNode) => agents.find(agent => agent.id === (node.id === "maze" ? "syntax" : node.id));
-  const satellites = nodes.filter(node => !node.isCenter);
+  const papaya = agents.find(agent => agent.id === "syntax") || currentAgent;
   return (
-    <main className="papaya-network-stage" aria-label="PapayaOS agent network">
-      <div className="papaya-network-heading"><span>DEIN KI-TEAM</span><strong>Dein Team. Dein nächster Schritt.</strong><small>Wähle einen Core. Dein Workspace bleibt verbunden.</small></div>
-      <svg className="papaya-network-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {satellites.map(node => {
-            const p = MODERN_NODE_LAYOUT[node.id];
-            if (!p) return null;
-            const route = `M 50 51 Q ${(50 + p.x) / 2} ${(51 + p.y) / 2 - 3} ${p.x} ${p.y}`;
-            return <g key={node.id} style={{ "--network-color": node.hexColor, "--line-delay": `${p.delay}ms` } as React.CSSProperties}>
-              <path id={`papaya-route-${node.id}`} pathLength={1} d={route} />
-              <circle cx={p.x} cy={p.y} r=".42" />
-              <circle className="papaya-network-packet" r=".58">
-                <animateMotion path={route} begin={`${720 + p.delay}ms`} dur="1.15s" fill="freeze" />
-                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.78;1" begin={`${720 + p.delay}ms`} dur="1.15s" fill="freeze" />
-              </circle>
-            </g>;
-          })}
-      </svg>
-      {satellites.map(node => {
-        const p = MODERN_NODE_LAYOUT[node.id];
-        const agent = agentFor(node);
-        if (!p || !agent) return null;
-        return <button key={node.id} className="papaya-network-agent" style={{ left: `${p.x}%`, top: `${p.y}%`, "--node-color": node.hexColor, "--node-delay": `${p.delay}ms`, "--from-x": `${(50 - p.x) * 7}px`, "--from-y": `${(51 - p.y) * 5}px` } as React.CSSProperties} onClick={() => onStart(agent.id)} aria-label={`Start ${agent.name}`}>
-          <span className="papaya-network-agent-mark">{agent.railLetter || agent.short?.[0]}</span><span className="papaya-network-agent-copy"><strong>{node.name}</strong><small>{node.sub}</small></span><ArrowRight className="papaya-network-agent-arrow" size={14}/>
-        </button>;
-      })}
-      <div className="papaya-network-hub" style={{ "--hub-color": currentAgent.color || "#ff7544" } as React.CSSProperties}>
-        <span className="papaya-network-hub-eyebrow"><i/>PAPAYA OS <b/> CORE</span>
-        <span className="papaya-network-hub-mark">P</span>
-        <strong>{currentAgent.name}</strong>
-        <small>{currentAgent.tag}</small>
-        <button onClick={() => onStart(currentAgent.id)}>Workspace öffnen <ArrowRight size={14}/></button>
+    <main className="papaya-launch" aria-label="PapayaOS Startbereich">
+      <div className="papaya-launch-shell">
+        <section className="papaya-launch-intro">
+          <div className="papaya-launch-brand"><span className="papaya-launch-brand-mark">P</span><strong>PAPAYA<span>OS</span></strong><i /><small>YOUR OWN INTELLIGENCE</small></div>
+          <div className="papaya-launch-intro-copy">
+            <span className="papaya-launch-eyebrow"><b /> EIN RAUM FÜR ALLES, WAS DU VORHAST</span>
+            <h1>Dein Kopf<br />hat <em>mehr vor.</em></h1>
+            <p>Aus einer Frage wird ein Plan. Aus acht Spezialisten wird dein eigenes KI-System. Starte dort, wo du gerade bist.</p>
+            <div className="papaya-launch-actions">
+              <button className="papaya-launch-primary" onClick={() => onStart(papaya.id)}>Workspace öffnen <ArrowRight size={17} /></button>
+              {onVoice && <button className="papaya-launch-secondary" onClick={onVoice}><Mic size={16} /> Mit Papaya sprechen</button>}
+            </div>
+          </div>
+          <div className="papaya-launch-intro-foot"><span>01 / 08</span><div><strong>Ein gemeinsamer Kontext.</strong><small>Jeder Core bringt seine Stärke ein.</small></div><span className="papaya-launch-foot-line" /></div>
+        </section>
+
+        <section className="papaya-launch-system" aria-label="Dein PapayaOS System">
+          <div className="papaya-launch-feature">
+            <div className="papaya-launch-feature-top"><span>THE PAPAYA SYSTEM <b /> 01</span><span>YOUR WORKSPACE</span></div>
+            <div className="papaya-launch-feature-art" aria-hidden="true">
+              <span className="papaya-launch-axis papaya-launch-axis--one" /><span className="papaya-launch-axis papaya-launch-axis--two" />
+              <span className="papaya-launch-frame papaya-launch-frame--outer" /><span className="papaya-launch-frame papaya-launch-frame--inner" />
+              <span className="papaya-launch-sigil">P</span>
+              <span className="papaya-launch-coordinate papaya-launch-coordinate--top">01: THINK</span>
+              <span className="papaya-launch-coordinate papaya-launch-coordinate--bottom">08: CREATE</span>
+            </div>
+            <div className="papaya-launch-feature-copy"><span>DEIN ZENTRUM</span><h2>Ein Gedanke.<br /><em>Acht Wege.</em></h2><p>Papaya verbindet deine Ideen mit den richtigen Cores und hält alles in einem Workspace zusammen.</p><button onClick={() => onStart(papaya.id)}>Papaya starten <ArrowRight size={16} /></button></div>
+            <div className="papaya-launch-feature-rule" aria-hidden="true" />
+          </div>
+          <div className="papaya-launch-roster-heading"><div><span>DEINE SPEZIALISTEN</span><strong>Wähle deinen Core.</strong></div><small>8 CORES · 1 SYSTEM</small></div>
+          <div className="papaya-launch-roster">
+            {nodes.map((node, index) => {
+              const agent = agentFor(node);
+              if (!agent) return null;
+              return <button key={node.id} className="papaya-launch-core" style={{ "--core-color": node.hexColor, "--core-index": index } as React.CSSProperties} onClick={() => onStart(agent.id)} aria-label={`${agent.name} öffnen`}>
+                <span className="papaya-launch-core-index">{String(index + 1).padStart(2, "0")}</span>
+                <span className="papaya-launch-core-icon">{agent.railLetter || agent.short?.[0]}</span>
+                <span className="papaya-launch-core-copy"><strong>{node.isCenter ? "PAPAYA" : node.name}</strong><small>{node.sub}</small></span>
+                <ArrowRight size={14} className="papaya-launch-core-arrow" />
+              </button>;
+            })}
+          </div>
+        </section>
       </div>
-      <div className="papaya-network-footnote"><span><i/>8 CORES BEREIT</span><span>EIN GEMEINSAMER WORKSPACE</span></div>
     </main>
   );
 }
@@ -986,46 +993,8 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         <span>1-MIN EINWEISUNG</span>
       </button>
 
-      {isModern && (
-        <section className="fixed left-6 top-[48px] bottom-[112px] z-[6] hidden w-[min(330px,25vw)] flex-col pointer-events-auto lg:flex" aria-label="PapayaOS Agentenübersicht">
-          <div className="mb-6">
-            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-[#ff9b75]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7544] shadow-[0_0_10px_#ff7544]" /> PAPAYAOS · YOUR AI TEAM
-            </div>
-            <h1 className="font-serif text-[clamp(38px,3.4vw,54px)] leading-[0.96] tracking-[-0.045em] text-white">
-              Acht Cores.<br /><span className="bg-gradient-to-r from-[#ff7544] via-[#ff8a52] to-[#ff4389] bg-clip-text text-transparent">Ein System.</span>
-            </h1>
-            <p className="mt-4 max-w-[30ch] font-sans text-sm leading-6 text-zinc-300/75">Wähle den Spezialisten für deinen nächsten Schritt. Dein Kontext bleibt im gemeinsamen Workspace.</p>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/[0.09] bg-[#120e10]/55 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-            <div className="px-3 pb-2 pt-2 text-[9px] font-bold tracking-[0.18em] text-zinc-500">DEINE SPEZIALISTEN <span className="ml-1 text-[#ff9b75]">08</span></div>
-            <div className="space-y-0.5">
-              {allPrimaryNodes.map((node) => {
-                const agentId = node.id === "maze" ? "syntax" : node.id;
-                const agent = agents.find((item) => item.id === agentId);
-                const active = activeHoveredAgent.id === agentId;
-                if (!agent) return null;
-                return (
-                  <button key={node.id} onMouseEnter={() => setHoveredNodeId(node.id)} onMouseLeave={() => setHoveredNodeId(null)} onClick={() => { setSelectedAnimId(node.id); setHoveredNodeId(node.id); playHudSound(720, "sine", 0.07); }} className={`group flex w-full items-center gap-2 rounded-[13px] border px-3 py-0.5 text-left transition-all ${active ? "border-white/[0.13] bg-white/[0.07]" : "border-transparent hover:border-white/[0.08] hover:bg-white/[0.045]"}`}>
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] border font-semibold" style={{ color: node.hexColor, borderColor: `${node.hexColor}55`, background: `${node.hexColor}12` }}>{agent.railLetter}</span>
-                    <span className="min-w-0 flex-1"><span className="block truncate font-sans text-[13px] font-semibold text-white">{node.isCenter ? "Papaya" : agent.name}</span><span className="mt-0.5 block truncate font-sans text-[10px] text-zinc-400">{node.sub}</span></span>
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition ${active ? "scale-125" : "opacity-50"}`} style={{ background: node.hexColor, boxShadow: active ? `0 0 10px ${node.hexColor}` : undefined }} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/[0.09] bg-[#120e10]/70 px-4 py-3 backdrop-blur-xl">
-            <div className="flex items-center gap-2.5"><span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.55)]" /><span className="font-sans text-[11px] text-zinc-300">Alle Cores bereit</span></div>
-            <span className="font-sans text-[10px] text-zinc-500">8 / 8</span>
-          </div>
-        </section>
-      )}
-
       {isModern ? (
-        <ModernAgentWorkspace nodes={allPrimaryNodes} agents={agents} currentAgent={activeHoveredAgent} onStart={onSelectAgentAndStart} />
+        <ModernAgentWorkspace nodes={allPrimaryNodes} agents={agents} currentAgent={activeHoveredAgent} onStart={onSelectAgentAndStart} onVoice={onOpenMobileVoice} />
       ) : (
         <div ref={canvasMountRef} className="fixed inset-0 bottom-0 z-[1] cursor-crosshair" />
       )}
@@ -1120,7 +1089,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
       })}
 
       {/* 5. Bottom Active Core Detail Card */}
-      {activeHoveredAgent && (
+      {!isModern && activeHoveredAgent && (
         <div
           className={`fixed bottom-4 right-4 sm:right-6 z-20 max-w-sm sm:max-w-md p-3.5 rounded-2xl backdrop-blur-xl border transition-all duration-300 shadow-2xl flex items-center justify-between gap-3 text-xs ${
             isModern
@@ -1195,7 +1164,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
       )}
 
       {/* Floating Mobile Voice Quick Action (Prominent for thumb tapping on mobile screens) */}
-      {onOpenMobileVoice && (
+      {!isModern && onOpenMobileVoice && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-auto sm:hidden">
           <button
             onClick={() => {
