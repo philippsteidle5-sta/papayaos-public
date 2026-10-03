@@ -729,7 +729,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         setHoveredNodeId(targetNode.id);
         playHudSound(880, "sawtooth", 0.15);
         if (onSelectAgentRef.current) {
-          onSelectAgentRef.current(targetNode.id);
+          onSelectAgentRef.current(targetNode.id === "maze" ? "syntax" : targetNode.id);
         }
       }
     };
@@ -823,8 +823,9 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         const yOff = c.node.isCenter ? 2.5 : 1.6;
         const lp = c.group.position.clone().add(new THREE.Vector3(0, -yOff, 0));
         lp.project(camera);
-        const scrX = (lp.x * 0.5 + 0.5) * W();
-        const scrY = (-lp.y * 0.5 + 0.5) * H();
+        const mountRect = mount.getBoundingClientRect();
+        const scrX = mountRect.left + (lp.x * 0.5 + 0.5) * W();
+        const scrY = mountRect.top + (-lp.y * 0.5 + 0.5) * H();
         const op = eased * (i === hoveredIndex ? 1 : 0.85);
 
         const el = primaryLabelRefs.current[c.node.id];
@@ -884,7 +885,8 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
     };
   }, [allPrimaryNodes]);
 
-  const activeHoveredAgent = agents.find((a) => a.id === (hoveredNodeId || currentAgentId)) || agents[0];
+  const activeNodeAgentId = hoveredNodeId === "maze" ? "syntax" : hoveredNodeId;
+  const activeHoveredAgent = agents.find((a) => a.id === (activeNodeAgentId || currentAgentId)) || agents[0];
 
   return (
     <div
@@ -1110,21 +1112,45 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
       </div>
 
       {isModern && (
-        <section className="fixed left-6 top-[88px] z-[6] hidden max-w-[390px] pointer-events-none lg:block" aria-label="PapayaOS Agentenübersicht">
-          <div className="rounded-[24px] border border-white/[0.10] bg-[#120e10]/65 px-5 py-4 shadow-[0_20px_70px_rgba(0,0,0,0.26)] backdrop-blur-xl">
-            <div className="mb-2 flex items-center gap-2 text-[9px] font-bold tracking-[0.2em] text-[#ff9b75]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7544] shadow-[0_0_10px_#ff7544]" /> PAPAYAOS · AUTONOMOUS INTELLIGENCE
+        <section className="fixed left-6 top-[100px] bottom-[112px] z-[6] hidden w-[min(330px,25vw)] flex-col pointer-events-auto lg:flex" aria-label="PapayaOS Agentenübersicht">
+          <div className="mb-6">
+            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-[#ff9b75]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7544] shadow-[0_0_10px_#ff7544]" /> PAPAYAOS · YOUR AI TEAM
             </div>
-            <h1 className="font-serif text-[clamp(28px,2.5vw,38px)] leading-none tracking-[-0.04em] text-white">
-              Acht Cores. <span className="bg-gradient-to-r from-[#ff7544] to-[#ff4389] bg-clip-text text-transparent">Ein System.</span>
+            <h1 className="font-serif text-[clamp(38px,3.4vw,54px)] leading-[0.96] tracking-[-0.045em] text-white">
+              Acht Cores.<br /><span className="bg-gradient-to-r from-[#ff7544] via-[#ff8a52] to-[#ff4389] bg-clip-text text-transparent">Ein System.</span>
             </h1>
-            <p className="mt-2 max-w-[42ch] font-sans text-xs leading-5 text-zinc-300/75">Spezialisierte Agenten, synchron für deinen nächsten Gedanken.</p>
+            <p className="mt-4 max-w-[30ch] font-sans text-sm leading-6 text-zinc-300/75">Wähle den Spezialisten für deinen nächsten Schritt. Dein Kontext bleibt im gemeinsamen Workspace.</p>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/[0.09] bg-[#120e10]/55 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+            <div className="px-3 pb-2 pt-2 text-[9px] font-bold tracking-[0.18em] text-zinc-500">DEINE SPEZIALISTEN <span className="ml-1 text-[#ff9b75]">08</span></div>
+            <div className="space-y-1">
+              {allPrimaryNodes.map((node) => {
+                const agentId = node.id === "maze" ? "syntax" : node.id;
+                const agent = agents.find((item) => item.id === agentId);
+                const active = activeHoveredAgent.id === agentId;
+                if (!agent) return null;
+                return (
+                  <button key={node.id} onMouseEnter={() => setHoveredNodeId(node.id)} onMouseLeave={() => setHoveredNodeId(null)} onClick={() => { setSelectedAnimId(node.id); setHoveredNodeId(node.id); playHudSound(720, "sine", 0.07); }} className={`group flex w-full items-center gap-3 rounded-[15px] border px-3 py-2.5 text-left transition-all ${active ? "border-white/[0.13] bg-white/[0.07]" : "border-transparent hover:border-white/[0.08] hover:bg-white/[0.045]"}`}>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border font-semibold" style={{ color: node.hexColor, borderColor: `${node.hexColor}55`, background: `${node.hexColor}12` }}>{agent.railLetter}</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate font-sans text-[13px] font-semibold text-white">{node.isCenter ? "Papaya" : agent.name}</span><span className="mt-0.5 block truncate font-sans text-[10px] text-zinc-400">{node.sub}</span></span>
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition ${active ? "scale-125" : "opacity-50"}`} style={{ background: node.hexColor, boxShadow: active ? `0 0 10px ${node.hexColor}` : undefined }} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/[0.09] bg-[#120e10]/70 px-4 py-3 backdrop-blur-xl">
+            <div className="flex items-center gap-2.5"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span><span className="font-sans text-[11px] text-zinc-300">Alle Cores bereit</span></div>
+            <span className="font-sans text-[10px] text-zinc-500">8 / 8</span>
           </div>
         </section>
       )}
 
       {/* 3. Three.js Mount Stage */}
-      <div ref={canvasMountRef} className="relative w-full h-full cursor-crosshair z-[1]" />
+      <div ref={canvasMountRef} className="fixed inset-0 bottom-0 z-[1] cursor-crosshair lg:left-[26%] lg:top-[84px] lg:bottom-[104px]" />
 
       {/* 4. Projected HTML Labels for Primary Cores */}
       {allPrimaryNodes.map((node) => {
