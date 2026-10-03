@@ -20,7 +20,7 @@ interface CyberpunkLandingPageProps {
 
 /** Sales page with the OS account login and beta-key entry connected. */
 export const CyberpunkLandingPage: React.FC<CyberpunkLandingPageProps> = ({ onEnterApp }) => {
-  const [loginOpen, setLoginOpen] = useState(true);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [keyEntryOpen, setKeyEntryOpen] = useState(false);
   const [accessKey, setAccessKey] = useState("");
   const [keyError, setKeyError] = useState("");

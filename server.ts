@@ -8,7 +8,7 @@ import { createServer as createViteServer } from "vite";
 
 dotenv.config();
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Helper to initialize Gemini safely (Lazy Initialization)
 function getGeminiClient(customKey?: string) {
@@ -5007,7 +5007,7 @@ User prompt: "${finalPrompt}"`,
     });
   }
 
-  app.listen(PORT, "127.0.0.1", () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Syntax OS server running on http://localhost:${PORT}`);
   });
 }

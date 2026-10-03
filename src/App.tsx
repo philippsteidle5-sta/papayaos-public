@@ -523,13 +523,9 @@ export default function App() {
   const [isMaintenanceActive, setIsMaintenanceActive] = useState<boolean>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      // Only switch to sales page if URL parameter explicitly asks for it
-      if (params.get("sales") === "true" || params.get("conversion") === "true" || params.get("landing") === "true") {
-        return false;
-      }
-      if (params.get("maintenance") === "false") return false;
+      if (params.get("maintenance") === "true") return true;
     } catch {}
-    return true; // IMMER standardmäßig Wartungs-Website aktiv bei jedem Neuladen!
+    return false;
   });
 
   // Clean stale storage on load so reload always stays on Maintenance website
