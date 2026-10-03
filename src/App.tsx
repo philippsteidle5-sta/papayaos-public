@@ -38,6 +38,7 @@ export interface ActiveMapData {
 import { ParticleSphere } from "./components/ParticleSphere";
 import { ParticleVoiceOrb } from "./components/ParticleVoiceOrb";
 import { MultiAssistantCanvas } from "./components/MultiAssistantCanvas";
+import { FocusCanvasHeader } from "./components/FocusCanvasLayout";
 import { AgentNavigationArrows } from "./components/AgentNavigationArrows";
 import { AgentConstellationScreen } from "./components/AgentConstellationScreen";
 import { MobileVoiceInterface } from "./components/MobileVoiceInterface";
@@ -4877,116 +4878,21 @@ export default function App() {
           handleImageSelect(file);
         }
       }}
-      className="relative min-h-screen w-full font-sans overflow-x-hidden snap-y snap-mandatory scroll-smooth transition-colors duration-700 bg-black text-[#d9f4ff]"
-      style={{ scrollSnapType: "y mandatory", scrollBehavior: "smooth" }}
+      className="papaya-focus-surface relative min-h-screen w-full overflow-x-hidden"
+      style={{ scrollBehavior: "smooth" }}
     >
-      {/* Deep Spatial Mesh Gradient & Coordinate Matrix Gridlines */}
-      <div className="focus-canvas-spatial-bg">
-        {/* Soft Agent-Reactive Aura 1 (Center Core Halo) */}
-        <div
-          className="focus-canvas-mesh-aura w-[600px] h-[600px] -top-[100px] left-1/2 -translate-x-1/2"
-          style={{
-            backgroundColor: ((currentAgent?.id === "syntax" || currentAgent?.id === "maze") && isModern) ? "#a855f7" : (currentAgent?.color || "#00f0ff"),
-            opacity: state === "speaking" ? 0.08 : state === "listening" ? 0.1 : 0.03,
-          }}
-        />
-        {/* Deep Space Ambient Aura 2 (Lower Right) */}
-        <div
-          className="focus-canvas-mesh-aura w-[500px] h-[500px] bottom-[50px] right-[10%]"
-          style={{
-            backgroundColor: isModern ? "#a855f7" : "#00f0ff",
-            opacity: 0.02,
-          }}
-        />
-        {/* Precision Spatial Grid Overlay with Center Mask */}
-        <div className="focus-canvas-grid-lines" />
-      </div>
+      <FocusCanvasHeader
+        lang={lang}
+        muted={muted}
+        onToggleMute={handleToggleMuteAll}
+        onToggleLang={handleToggleLang}
+        onSettings={() => setSettingsOpen(true)}
+        onHome={handleOpenSalesPage}
+        onMemory={() => setObsidianBrainOpen(true)}
+        onGoals={() => handleToggleWidget("goalsWidget")}
+        onPlugins={() => handleToggleWidget("appStore")}
+      />
 
-      {/* Minimal Sovereign Top Command Bar (3-Zone Contract) */}
-      <header className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto bg-gradient-to-b from-black/80 via-black/30 to-transparent">
-        {/* Zone 1: Wordmark */}
-        <div className="flex items-center gap-2.5">
-          <span className="font-mono text-sm font-black text-white tracking-widest uppercase">
-            Papaya<span className="text-[#ff6b35]">OS</span>
-          </span>
-          <span className="text-zinc-600 text-xs">·</span>
-          <span className="text-xs font-mono text-zinc-400 hidden sm:inline">Sovereign Intelligence</span>
-        </div>
-
-        {/* Zone 2: System Status */}
-        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>8 Cores synchronisiert</span>
-          <span className="text-zinc-600 hidden md:inline">·</span>
-          <span className="text-zinc-500 hidden md:inline">0ms Latenz</span>
-        </div>
-
-        {/* Zone 3: Essential Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Prominent Audio Mute Button */}
-          <button
-            type="button"
-            id="global-header-mute-toggle"
-            onClick={handleToggleMuteAll}
-            className={`text-xs font-mono transition px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg border cursor-pointer flex items-center gap-1.5 active:scale-95 select-none ${
-              muted
-                ? "bg-rose-500/20 border-rose-500/50 text-rose-300 hover:bg-rose-500/30 shadow-[0_0_14px_rgba(244,63,94,0.3)]"
-                : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
-            }`}
-            title={
-              muted
-                ? "Audio stummgeschaltet (Klicken zum Aktivieren / Taste 'M')"
-                : "Audio aktiv (Klicken zum Stummschalten / Taste 'M')"
-            }
-          >
-            {muted ? (
-              <VolumeX className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-            ) : (
-              <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            )}
-            <span className="font-bold tracking-wider text-[11px]">
-              {muted ? "MUTED" : "AUDIO"}
-            </span>
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                muted ? "bg-rose-500" : "bg-emerald-400 animate-pulse"
-              }`}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleToggleLang?.()}
-            className="text-xs font-mono text-zinc-400 hover:text-white transition px-2.5 py-1 rounded-lg hover:bg-white/5 border border-white/5 cursor-pointer"
-            title="Sprache wechseln"
-          >
-            {lang.toUpperCase()}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="text-xs font-mono text-zinc-400 hover:text-white transition px-2.5 py-1 rounded-lg hover:bg-white/5 border border-white/5 cursor-pointer flex items-center gap-1.5"
-            title="Einstellungen öffnen"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Minimalist Side Plugin Tools Rail */}
-      {!isFocusMode && (
-        <MinimalPluginRail
-          activeWidgets={activeWidgets}
-          onToggleWidget={handleToggleWidget}
-          onOpenVeoStudio={() => handleOpenVeoStudio()}
-          onOpenObsidianBrain={() => setObsidianBrainOpen(true)}
-          onOpenScreenPerception={handleGrantScreenPermission}
-          isScreenSharing={isScreenSharing}
-          onOpenPluginStore={() => handleToggleWidget("appStore")}
-          lang={lang}
-        />
-      )}
       {!isFocusMode && (
         <WorkspaceLayoutEditor
           isEditMode={isEditMode}
@@ -5036,6 +4942,8 @@ export default function App() {
             </div>
           )}
           <MultiAssistantCanvas
+            focusDesign
+            onOpenPluginStore={() => handleToggleWidget("appStore")}
             agents={agents}
             currentAgent={currentAgent}
             state={state}
@@ -5055,7 +4963,7 @@ export default function App() {
             onSelectAgent={handleSwitchAgent}
             onOpenGmailInbox={() => handleToggleWidget("gmailInbox")}
             onOpenVeoStudio={() => handleOpenVeoStudio()}
-            onOpenMemoryVault={() => handleToggleWidget("claudeCode")}
+            onOpenMemoryVault={() => setObsidianBrainOpen(true)}
             messages={messages}
             onSendMessage={(msg) => handleSendMessage(msg)}
             isLoading={isLoading}
@@ -5378,33 +5286,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {/* Interactive Core HUD overlay around/on the 3D Sphere */}
-      <div 
-        className={`fixed top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center pointer-events-none select-none transition-all duration-700 ease-out scale-100 ${
-          isFocusMode ? "opacity-0 pointer-events-none" : "opacity-100"
-        }`}
-        style={{ width: "360px", height: "360px" }}
-      >
-        {/* Dynamic Circular Audio Visualizer Ring */}
-        <CircularVisualizer
-          agentColor={currentAgent.color}
-          state={state}
-          micLevel={micLevel}
-          speakingLevel={speakingLevel}
-        />
-
-        {/* Glowing Voice Recording Ring when listening or speaking */}
-        {(state === "listening" || state === "speaking") && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 transition-opacity duration-300">
-            <div className={`w-20 h-20 rounded-full animate-pulse ${
-              isModern
-                ? "bg-purple-500/10 border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
-                : "bg-cyan-500/10 border border-cyan-500/40 shadow-[0_0_20px_rgba(0,240,255,0.3)]"
-            }`} />
-          </div>
-        )}
-      </div>
 
       {/* Clean Focus Dock is now rendered cleanly inside MultiAssistantCanvas */}
       {false && activeWidgets?.agentDock !== false && !isModern && (
@@ -5773,13 +5654,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {/* Sci-Fi Grid Overlay decoration */}
-      <div className={`absolute inset-0 z-[1] bg-[linear-gradient(rgba(78,232,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(78,232,255,0.03)_1px,transparent_1px)] bg-[size:30px_30px] transition-opacity duration-500 pointer-events-none mix-blend-screen mask-[radial-gradient(ellipse_at_50%_40%,black_0%,transparent_72%)] ${
-        isFocusMode ? "opacity-0" : "opacity-60"
-      }`} />
-
-
 
       {/* NEO SPEAK MODUS (Quantum Assembly Particle Orbit & Permanent Voice System) */}
       <NeoSpeakOverlay

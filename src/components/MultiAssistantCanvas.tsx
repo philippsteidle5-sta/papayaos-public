@@ -38,8 +38,11 @@ import { ChronosCalendarWidget } from "./ChronosCalendarWidget";
 import { LiquidJellyNav } from "./LiquidJellyNav";
 import { AetherChatCard } from "./AetherChatCard";
 import { PapayaConstellationBackground } from "./PapayaConstellationBackground";
+import { FocusCanvasLayout, FocusConstellation } from "./FocusCanvasLayout";
 
 interface MultiAssistantCanvasProps {
+  focusDesign?: boolean;
+  onOpenPluginStore?: () => void;
   agents: AgentConfig[];
   currentAgent: AgentConfig;
   state: "idle" | "listening" | "thinking" | "speaking" | "";
@@ -106,6 +109,8 @@ interface MultiAssistantCanvasProps {
 }
 
 export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
+  focusDesign = false,
+  onOpenPluginStore,
   agents,
   currentAgent,
   state,
@@ -120,7 +125,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
   particleSpeed,
   audioSensitivity,
   coreStyling,
-  communicationScope = "SINGLE",
+  communicationScope = "SINGLE" as CommunicationScope,
   activeSpeakingAgentId = null,
   isScreenSharing = false,
   onSelectAgent,
@@ -143,7 +148,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
   onClearChat,
   onSpeak,
   liveTranscript = "",
-  lang = "de",
+  lang = "de" as "de" | "en",
   onToggleLang,
   onOpenAgentSyncSynthesis,
   onOpenVoiceConference,
@@ -294,14 +299,22 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
     }
   };
 
-  return (
-    <div
-      className="absolute inset-0 w-full h-full z-0 overflow-hidden pointer-events-none select-none"
-      role="region"
-      aria-label="PapayaOS Clean Focus Canvas System"
-    >
+  const canvasScene = (
+    <>
       {/* 3D Backdrop Canvas: All 8 Matrix, The Big 3 Tri-Core, or Single Agent Particles */}
-      {isAllMode ? (
+      {focusDesign && isMatrixMode ? (
+        <FocusConstellation
+          agents={agents}
+          bigThree={isBig3Mode}
+          activeSpeakingAgentId={activeSpeakingAgentId}
+          state={state}
+          micLevel={micLevel}
+          speakingLevel={speakingLevel}
+          onSelectAgent={onSelectAgent ? (agent) => { onSelectCommunicationScope?.("SINGLE"); onSelectAgent(agent); } : undefined}
+          onOpenChat={() => setIsChatOpen(true)}
+          lang={lang}
+        />
+      ) : isAllMode ? (
         <div className="absolute inset-0 w-full h-full z-10 overflow-hidden pointer-events-auto bg-black">
           <AllAgentsVoiceMatrixCanvas
             agents={agents}
@@ -335,7 +348,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
       ) : (
         <>
           {/* Authentic PapayaOS Stardust Constellation Background */}
-          <PapayaConstellationBackground accentColor={currentAgent.color} />
+          {!focusDesign && <PapayaConstellationBackground accentColor={currentAgent.color} />}
 
           {/* Subtle Hyperspace Pulse Wave */}
           {isTransitioning && (
@@ -396,7 +409,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
                 className={`absolute inset-0 w-full h-full ${animClass}`}
               >
                 {(isActive || isPrev) && (
-                  resolvedShape === "particle-orb" ? (
+                  (resolvedShape === "particle-orb" || (focusDesign && resolvedShape === "auto")) ? (
                     <div className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-auto">
                       <ParticleVoiceOrb
                         responsive
@@ -406,7 +419,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
                         isLive={isActive && (state === "speaking" || state === "listening")}
                         state={isActive ? state : "idle"}
                         themeStyle="modern"
-                        enableDrag={true}
+                        enableDrag={!focusDesign}
                       />
                     </div>
                   ) : (
@@ -432,6 +445,49 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
         </>
       )}
 
+    </>
+  );
+
+  return (
+    <div className={focusDesign ? "focus-canvas-root" : "absolute inset-0 w-full h-full z-0 overflow-hidden pointer-events-none select-none"} role="region" aria-label="PapayaOS Clean Focus Canvas System">
+      {focusDesign ? (
+        <FocusCanvasLayout
+          agents={agents}
+          currentAgent={currentAgent}
+          lang={lang}
+          state={state}
+          isMatrixMode={isMatrixMode}
+          communicationScope={communicationScope}
+          onSelectCommunicationScope={onSelectCommunicationScope}
+          onSelectAgent={onSelectAgent}
+          onOpenChat={() => setIsChatOpen(true)}
+          messageCount={messages.length}
+          inputText={inputText}
+          onChangeInputText={setInputText}
+          onSubmit={() => { setIsChatOpen(true); handleInternalSend(); }}
+          isLoading={isLoading}
+          canSend={Boolean(onSendMessage)}
+          micActive={micActive}
+          onToggleMic={onToggleMic}
+          onAttach={() => fileInputRef.current?.click()}
+          canAttach={Boolean(onImageSelect || onImagesSelect)}
+          images={effectiveImages}
+          onRemoveImage={onRemoveImage}
+          onClearImages={onClearImage}
+          onMemory={onOpenMemoryVault}
+          onCalendar={isCalendarInstalled ? handleToggleCalendar : undefined}
+          onGoals={isGoalsInstalled ? onToggleGoals : undefined}
+          onPlugins={onOpenPluginStore}
+          onCustomize={isLayoutInstalled && onOpenLayout ? onOpenLayout : onToggleCoreShape}
+          onInspect={onOpenAgentInspector ? () => onOpenAgentInspector(currentAgent.id) : undefined}
+          onMap={isGoogleMapsInstalled ? onToggleGoogleMaps : undefined}
+          isMapOpen={isGoogleMapsOpen}
+          isCalendarOpen={calendarActive}
+          isGoalsOpen={isGoalsOpen}
+        >{canvasScene}</FocusCanvasLayout>
+      ) : canvasScene}
+      {focusDesign && <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />}
+
       {/* AGENT QUICK-SWITCH MODAL */}
       {isAgentPickerOpen && (
         <div 
@@ -439,7 +495,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
           onClick={() => setIsAgentPickerOpen(false)}
         >
           <div 
-            className="w-full max-w-2xl rounded-3xl bg-[#080911]/95 border border-white/10 p-6 shadow-2xl backdrop-blur-2xl text-left"
+            className="focus-picker-panel w-full max-w-2xl rounded-3xl bg-[#080911]/95 border border-white/10 p-6 shadow-2xl backdrop-blur-2xl text-left"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
@@ -508,7 +564,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
       )}
 
       {/* UNIFIED LIQUID JELLY FLOATING COMMAND DOCK - RIGHT SIDE VERTICAL RAIL */}
-      <div 
+      {!focusDesign && <div
         id="clean-focus-dock"
         className="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 pointer-events-auto select-none transition-all duration-300 flex items-center justify-center"
       >
@@ -538,10 +594,10 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
           isGoalsOpen={isGoalsOpen}
           onToggleGoals={onToggleGoals}
         />
-      </div>
+      </div>}
 
       {/* AETHER CHAT SYSTEM (Collapsed Pill in Image 1 & Recessed Floating Glass Card in Image 2) */}
-      <AetherChatCard
+      {(!focusDesign || isChatOpen) && <AetherChatCard
         isOpen={isChatOpen}
         onToggleOpen={() => setIsChatOpen(!isChatOpen)}
         currentAgent={currentAgent}
@@ -558,6 +614,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
         onImagesSelect={onImagesSelect}
         effectiveImages={effectiveImages}
         onClearImage={onClearImage}
+        onRemoveImage={onRemoveImage}
         onSpeak={onSpeak}
         agentColorMap={agentColorMap}
         onOpenAgentSyncSynthesis={onOpenAgentSyncSynthesis}
@@ -570,7 +627,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
         onToggleMute={onToggleMute}
         communicationScope={communicationScope}
         onSelectCommunicationScope={onSelectCommunicationScope}
-      />
+      />}
 
       {/* Standalone Fallback Calendar in Focus Canvas */}
       {!onOpenCalendar && internalCalendarOpen && (
