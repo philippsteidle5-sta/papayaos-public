@@ -1018,7 +1018,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
           </div>
 
           <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/[0.09] bg-[#120e10]/70 px-4 py-3 backdrop-blur-xl">
-            <div className="flex items-center gap-2.5"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span><span className="font-sans text-[11px] text-zinc-300">Alle Cores bereit</span></div>
+            <div className="flex items-center gap-2.5"><span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.55)]" /><span className="font-sans text-[11px] text-zinc-300">Alle Cores bereit</span></div>
             <span className="font-sans text-[10px] text-zinc-500">8 / 8</span>
           </div>
         </section>
@@ -1169,7 +1169,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
                 className="px-3 py-2 rounded-xl bg-gradient-to-r from-[#ff7544]/20 to-[#ff4389]/20 border border-[#ff7544]/50 hover:border-[#ff4389] text-[#ffd0bd] hover:text-white font-mono font-bold text-xs tracking-wider flex items-center gap-1.5 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(255,117,68,0.18)] shrink-0"
                 title="Handy Sprach-Interface starten"
               >
-                <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                <Mic className="w-3.5 h-3.5 text-pink-400" />
                 <span>SPRACHE</span>
               </button>
             )}
@@ -1202,7 +1202,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
               playHudSound(900, "sawtooth", 0.1);
               onOpenMobileVoice();
             }}
-            className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#ff7544] to-[#ff4389] text-white font-mono text-xs font-black tracking-wider flex items-center gap-2 shadow-[0_0_25px_rgba(255,117,68,0.3)] border border-white/30 active:scale-95 cursor-pointer animate-pulse"
+            className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#ff7544] to-[#ff4389] text-white font-mono text-xs font-black tracking-wider flex items-center gap-2 shadow-[0_0_25px_rgba(255,117,68,0.3)] border border-white/30 active:scale-95 cursor-pointer"
           >
             <Mic className="w-4 h-4 text-white" />
             <span>🎤 HANDY SPRACH-INTERFACE</span>
