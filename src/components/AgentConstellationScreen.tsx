@@ -2,25 +2,18 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import * as THREE from "three";
 import {
   Sparkles,
-  Globe,
   Search,
   FileText,
-  MessageSquare,
   ArrowRight,
   Lock,
-  X,
-  Cpu,
-  Palette,
   Brain,
   Mic,
-  Smartphone,
 } from "lucide-react";
 import { AgentConfig } from "../types";
 import { UserRole, isAgentAllowed, getMinRequiredRoleForAgent } from "../rbac";
 import { AgentCinematicShowcaseModal } from "./AgentCinematicShowcaseModal";
 import { SyntaxSpatialGenesisAnimation } from "./SyntaxSpatialGenesisAnimation";
 import { useTheme } from "../utils/themeStore";
-import { PWAInstallButton } from "./PWAInstallButton";
 
 interface AgentConstellationScreenProps {
   agents: AgentConfig[];
@@ -68,13 +61,25 @@ function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart }: {
     <main className="papaya-network-stage" aria-label="PapayaOS agent network">
       <div className="papaya-network-heading"><span>DEIN KI-TEAM</span><strong>Dein Team. Dein nächster Schritt.</strong><small>Wähle einen Core. Dein Workspace bleibt verbunden.</small></div>
       <svg className="papaya-network-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        {satellites.map(node => { const p = MODERN_NODE_LAYOUT[node.id]; return p ? <g key={node.id} style={{ "--network-color": node.hexColor, "--line-delay": `${p.delay}ms` } as React.CSSProperties}><path d={`M 50 51 Q ${(50 + p.x) / 2} ${(51 + p.y) / 2 - 3} ${p.x} ${p.y}`} /><circle cx={p.x} cy={p.y} r=".38" /></g> : null; })}
+          {satellites.map(node => {
+            const p = MODERN_NODE_LAYOUT[node.id];
+            if (!p) return null;
+            const route = `M 50 51 Q ${(50 + p.x) / 2} ${(51 + p.y) / 2 - 3} ${p.x} ${p.y}`;
+            return <g key={node.id} style={{ "--network-color": node.hexColor, "--line-delay": `${p.delay}ms` } as React.CSSProperties}>
+              <path id={`papaya-route-${node.id}`} pathLength={1} d={route} />
+              <circle cx={p.x} cy={p.y} r=".42" />
+              <circle className="papaya-network-packet" r=".58">
+                <animateMotion path={route} begin={`${720 + p.delay}ms`} dur="1.15s" fill="freeze" />
+                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.78;1" begin={`${720 + p.delay}ms`} dur="1.15s" fill="freeze" />
+              </circle>
+            </g>;
+          })}
       </svg>
       {satellites.map(node => {
         const p = MODERN_NODE_LAYOUT[node.id];
         const agent = agentFor(node);
         if (!p || !agent) return null;
-        return <button key={node.id} className="papaya-network-agent" style={{ left: `${p.x}%`, top: `${p.y}%`, "--node-color": node.hexColor, "--node-delay": `${p.delay}ms` } as React.CSSProperties} onClick={() => onStart(agent.id)} aria-label={`Start ${agent.name}`}>
+        return <button key={node.id} className="papaya-network-agent" style={{ left: `${p.x}%`, top: `${p.y}%`, "--node-color": node.hexColor, "--node-delay": `${p.delay}ms`, "--from-x": `${(50 - p.x) * 7}px`, "--from-y": `${(51 - p.y) * 5}px` } as React.CSSProperties} onClick={() => onStart(agent.id)} aria-label={`Start ${agent.name}`}>
           <span className="papaya-network-agent-mark">{agent.railLetter || agent.short?.[0]}</span><span className="papaya-network-agent-copy"><strong>{node.name}</strong><small>{node.sub}</small></span><ArrowRight className="papaya-network-agent-arrow" size={14}/>
         </button>;
       })}
@@ -95,8 +100,6 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
   currentAgentId,
   onSelectAgentAndStart,
   onCloseConstellation,
-  onOpenMultiAgentChat,
-  onOpenLandingPage,
   userRole = "SOVEREIGN" as UserRole,
   onOpenRoleManager,
   onOpenTutorial,
@@ -105,7 +108,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasMountRef = useRef<HTMLDivElement>(null);
-  const { theme, toggleTheme, isModern } = useTheme();
+  const { isModern } = useTheme();
   const isModernRef = useRef(isModern);
   isModernRef.current = isModern;
 
@@ -125,7 +128,6 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
   const onOpenAgentInspectorRef = useRef(onOpenAgentInspector);
   onOpenAgentInspectorRef.current = onOpenAgentInspector;
 
-  const [topbarVisible, setTopbarVisible] = useState<boolean>(true);
 
   // Sound generator helper for Sci-Fi HUD interactions
   const playHudSound = (freq = 440, type: OscillatorType = "sine", duration = 0.08) => {
@@ -968,191 +970,24 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         </div>
       )}
 
-      {/* 2. Top Command Bar */}
-      <div
-        className={`fixed top-0 left-0 right-0 z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 backdrop-blur-md text-xs tracking-wider transition-opacity duration-700 ${
+      <button
+        onClick={() => {
+          playHudSound(950, "sawtooth", 0.2);
+          setShowGenesisAnimation(true);
+        }}
+        className={`papaya-intro-button fixed right-5 top-5 z-20 flex items-center gap-2 rounded-full border px-4 py-2.5 font-mono text-[10px] font-bold tracking-[0.12em] backdrop-blur-xl transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 ${
           isModern
-            ? "bg-[#100d0e]/85 border-b border-white/[0.09] text-zinc-300 shadow-[0_10px_35px_rgba(0,0,0,0.24)]"
-            : "bg-black/85 border-b border-cyan-400/25 text-slate-300"
-        } ${
-          topbarVisible ? "opacity-100" : "opacity-0"
+            ? "border-[#ff9b75]/35 bg-[#211517]/80 text-[#ffd1bd] shadow-[0_12px_40px_rgba(0,0,0,0.32),0_0_32px_rgba(255,117,68,0.1)] hover:border-[#ff9b75]/70 hover:bg-[#321c1b]/90 focus-visible:outline-[#ff9b75]"
+            : "border-cyan-400/45 bg-slate-950/80 text-cyan-200 shadow-[0_12px_40px_rgba(0,0,0,0.4),0_0_24px_rgba(0,240,255,0.12)] hover:border-cyan-300 focus-visible:outline-cyan-300"
         }`}
+        aria-label="1-Minuten-Einweisung starten"
       >
-        {/* Left Telemetry Cluster */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Brand Emblem */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
-            isModern
-              ? "bg-white/[0.045] border-white/[0.12] shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
-              : "bg-black/90 border-cyan-500/40 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              isModern
-                ? "bg-[#ff7544] shadow-[0_0_10px_rgba(255,107,53,0.9)] animate-pulse"
-                : "bg-cyan-400 shadow-[0_0_10px_rgba(0,240,255,1)] animate-pulse"
-            }`} />
-            <span className={`font-mono font-black tracking-[0.22em] text-xs ${
-              isModern ? "text-white" : "text-[#00f0ff] drop-shadow-[0_0_10px_rgba(0,240,255,0.9)]"
-            }`}>
-              PAPAYA OS
-            </span>
-            <span className={`text-[9px] font-mono border-l pl-2 ${
-              isModern ? "border-zinc-700 text-zinc-400" : "border-cyan-500/30 text-cyan-300/80"
-            }`}>
-              WORKSPACE
-            </span>
-          </div>
-
-          {/* Visual 8-Cores Micro-Matrix */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-mono text-[10.5px] font-bold transition-all shadow-sm ${
-            isModern
-              ? "border-[#ff7544]/25 bg-[#ff7544]/[0.07] text-[#ffad8d]"
-              : "border-cyan-400/40 bg-cyan-950/60 text-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
-          }`}>
-            <Cpu className={`w-3.5 h-3.5 ${isModern ? "text-[#ff7544]" : "text-cyan-300"} animate-pulse`} />
-            <span>8 CORES SYNCHRON</span>
-            
-            {/* Miniature visual core nodes */}
-            <div className={`flex items-center gap-1 pl-2 border-l ${isModern ? "border-[#ff7544]/30" : "border-cyan-400/30"}`}>
-              {allPrimaryNodes.map((n) => (
-                <span
-                  key={n.id}
-                  title={`${n.name} (${n.short})`}
-                  className="w-1.5 h-1.5 rounded-full transition-transform hover:scale-150 cursor-pointer"
-                  style={{
-                    backgroundColor: n.hexColor,
-                    boxShadow: `0 0 6px ${n.hexColor}`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Design Mode Switcher Button */}
-          {/* PWA Mobile App Install Button */}
-          <PWAInstallButton variant="badge" />
-
-          {/* Dedicated Mobile Voice Interface Trigger */}
-          {onOpenMobileVoice && (
-            <button
-              onClick={() => {
-                playHudSound(780, "sawtooth", 0.12);
-                onOpenMobileVoice();
-              }}
-              className="px-3 py-1.5 rounded-xl border border-pink-500/60 bg-gradient-to-r from-pink-950/80 via-purple-950/80 to-cyan-950/80 hover:from-pink-600 hover:to-cyan-600 text-white font-mono text-[11px] font-black tracking-wider transition cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(236,72,153,0.35)] active:scale-95 animate-pulse"
-              title="Handy Sprach-Interface mit 3D-Partikelkugel starten"
-            >
-              <Mic className="w-3.5 h-3.5 text-pink-400" />
-              <span>SPRACHE</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              playHudSound(650, "triangle", 0.08);
-              toggleTheme();
-            }}
-            title={`Design-Stil wechseln: Aktuell ist ${isModern ? "Modern Syntax" : "Cyberpunk Jarvis"}`}
-            className={`px-3 py-1.5 rounded-xl border font-mono text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              isModern
-                ? "border-white/[0.12] bg-white/[0.045] text-zinc-100 hover:bg-white/[0.09] hover:border-[#ff7544]/50 shadow-sm"
-                : "border-cyan-400/60 bg-cyan-950/70 hover:bg-cyan-500 hover:text-slate-950 text-cyan-200 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
-            }`}
-          >
-            <Palette className={`w-3.5 h-3.5 ${isModern ? "text-[#ff986f]" : "text-cyan-300"}`} />
-            <span>{isModern ? "DESIGN: MODERN" : "DESIGN: CYBERPUNK"}</span>
-          </button>
-
-          {onOpenLandingPage && (
-            <button
-              onClick={onOpenLandingPage}
-              className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                isModern
-                  ? "border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
-                  : "border-purple-400/60 bg-purple-950/70 hover:bg-purple-500 hover:text-white text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">VERKAUFSSEITE</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowShowcaseModal(true)}
-            className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              isModern
-                ? "border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
-                : "border-pink-400/60 bg-pink-950/70 hover:bg-pink-500 hover:text-white text-pink-200 shadow-[0_0_15px_rgba(236,72,153,0.3)]"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">3D SHOWCASE</span>
-          </button>
-
-          <button
-            onClick={() => {
-              playHudSound(950, "sawtooth", 0.2);
-              setShowGenesisAnimation(true);
-            }}
-            className={`px-3 py-1.5 rounded-xl border text-[11px] font-black transition cursor-pointer flex items-center gap-1.5 ${
-              isModern
-                ? "border-[#ff7544]/30 bg-[#ff7544]/[0.06] hover:bg-[#ff7544]/[0.12] text-[#ffad8d]"
-                : "border-cyan-400 bg-cyan-500/20 hover:bg-cyan-400 hover:text-slate-950 text-cyan-200 shadow-[0_0_20px_rgba(0,240,255,0.4)] animate-pulse"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            <span>1-MIN EINWEISUNG</span>
-          </button>
-
-          {onOpenAgentInspector && (
-            <button
-              onClick={() => onOpenAgentInspector(activeHoveredAgent.id)}
-              className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                isModern
-                  ? "border-white/[0.12] bg-white/[0.045] hover:bg-[#ff7544]/[0.08] hover:border-[#ff7544]/40 hover:text-[#ffcfbd] text-zinc-200"
-                  : "border-cyan-500/40 bg-slate-900/80 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300"
-              }`}
-            >
-              <Brain className={`w-3.5 h-3.5 ${isModern ? "text-[#ff986f]" : "text-cyan-400"}`} />
-              <span className="hidden sm:inline">MEMORY</span>
-            </button>
-          )}
-
-          {onOpenMultiAgentChat && (
-            <button
-              onClick={onOpenMultiAgentChat}
-              className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                isModern
-                  ? "border-white/[0.12] bg-white/[0.045] hover:bg-[#ff7544]/[0.08] hover:border-[#ff7544]/40 hover:text-[#ffcfbd] text-zinc-200"
-                  : "border-cyan-400/60 bg-cyan-950/80 hover:bg-cyan-500 hover:text-slate-950 text-cyan-200"
-              }`}
-            >
-              <MessageSquare className={`w-3.5 h-3.5 ${isModern ? "text-[#ff986f]" : "text-cyan-400"}`} />
-              <span className="hidden sm:inline">CHAT</span>
-            </button>
-          )}
-
-          {onCloseConstellation && (
-            <button
-              onClick={onCloseConstellation}
-              className={`p-1.5 rounded-xl border transition cursor-pointer ${
-                isModern
-                  ? "border-white/[0.12] bg-[#171314]/90 hover:bg-[#ff7544]/[0.12] hover:border-[#ff7544]/50 hover:text-[#ffad8d] text-zinc-400"
-                  : "border-zinc-700 bg-zinc-900/90 hover:bg-red-500/20 hover:border-red-400 hover:text-red-300 text-zinc-400"
-              }`}
-              title="Konstellation schließen"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
+        <Sparkles className="h-3.5 w-3.5" />
+        <span>1-MIN EINWEISUNG</span>
+      </button>
 
       {isModern && (
-        <section className="fixed left-6 top-[100px] bottom-[112px] z-[6] hidden w-[min(330px,25vw)] flex-col pointer-events-auto lg:flex" aria-label="PapayaOS Agentenübersicht">
+        <section className="fixed left-6 top-[48px] bottom-[112px] z-[6] hidden w-[min(330px,25vw)] flex-col pointer-events-auto lg:flex" aria-label="PapayaOS Agentenübersicht">
           <div className="mb-6">
             <div className="mb-3 flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-[#ff9b75]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#ff7544] shadow-[0_0_10px_#ff7544]" /> PAPAYAOS · YOUR AI TEAM
