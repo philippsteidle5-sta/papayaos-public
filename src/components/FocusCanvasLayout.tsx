@@ -1,12 +1,71 @@
 import React, { useRef } from "react";
 import { ArrowUp, ArrowUpRight, Brain, Calendar, ChevronRight, ImageIcon, MapPin, MessageSquare, Mic, Puzzle, SlidersHorizontal, Sparkles, Target, Volume2, VolumeX, X } from "lucide-react";
 import { AgentConfig, CommunicationScope } from "../types";
-import { ParticleVoiceOrb } from "./ParticleVoiceOrb";
 import "./focus-canvas.css";
 
 type Language = "de" | "en";
 
-export function FocusConstellation({ agents, bigThree, activeSpeakingAgentId, state, micLevel, speakingLevel, onSelectAgent, onOpenChat, lang }: {
+export function PapayaWorkspaceVisual({ agents, currentAgent, state, onSelectAgent, lang }: {
+  agents: AgentConfig[];
+  currentAgent: AgentConfig;
+  state: string;
+  onSelectAgent?: (agent: AgentConfig) => void;
+  lang: Language;
+}) {
+  const de = lang === "de";
+  const collaborators = agents.filter(agent => agent.id !== currentAgent.id).slice(0, 3);
+  const status = state === "listening" ? (de ? "Ich höre zu" : "Listening") : state === "thinking" ? (de ? "Sortiere Gedanken" : "Thinking") : state === "speaking" ? (de ? "Antwort kommt" : "Replying") : (de ? "Bereit für dich" : "Ready when you are");
+  return (
+    <div className="papaya-workspace-visual" data-state={state || "idle"} style={{ "--papaya-agent": currentAgent.color || "#ff7544" } as React.CSSProperties} aria-label={de ? "PapayaOS Workspace Vorschau" : "PapayaOS workspace preview"}>
+      <div className="papaya-visual-aura" aria-hidden="true" />
+      <div className="papaya-preview-window">
+        <div className="papaya-preview-topbar">
+          <span className="papaya-window-mark">P</span>
+          <span className="papaya-window-brand">PAPAYA<span>OS</span></span>
+          <span className="papaya-window-divider" />
+          <span className="papaya-window-view">{de ? "WORKSPACE" : "WORKSPACE"}</span>
+          <span className="papaya-window-live"><i />{de ? "BEREIT" : "READY"}</span>
+        </div>
+
+        <div className="papaya-preview-content">
+          <div className="papaya-preview-kicker"><span>{de ? "DEIN NÄCHSTER SCHRITT" : "YOUR NEXT STEP"}</span><span>01 / 03</span></div>
+          <h2>{de ? "Ein guter Gedanke verdient einen klaren Plan." : "A good thought deserves a clear plan."}</h2>
+          <p>{de ? "Dein Workspace hält Kontext, Agenten und Fortschritt zusammen." : "Your workspace keeps context, agents and momentum together."}</p>
+
+          <div className="papaya-active-agent-card">
+            <div className="papaya-active-agent-icon">{currentAgent.railLetter || "P"}</div>
+            <div className="papaya-active-agent-copy"><span>{de ? "DEIN AGENT" : "YOUR AGENT"}</span><strong>{currentAgent.name}</strong></div>
+            <span className="papaya-agent-state"><i />{status}</span>
+          </div>
+
+          <div className="papaya-flow-label">{de ? "DEINE SPEZIALISTEN" : "YOUR SPECIALISTS"}<span>{agents.length} {de ? "VERFÜGBAR" : "AVAILABLE"}</span></div>
+          <div className="papaya-flow-list">
+            {collaborators.map((agent, index) => (
+              <button key={agent.id} className="papaya-flow-agent" onClick={() => onSelectAgent?.(agent)} disabled={!onSelectAgent} style={{ "--flow-color": agent.color || "#ff7544", "--flow-index": index } as React.CSSProperties}>
+                <span className="papaya-flow-icon">{agent.railLetter || agent.short?.[0] || "•"}</span><span className="papaya-flow-copy"><strong>{agent.name}</strong><small>{agent.tag}</small></span><span className="papaya-flow-link" aria-hidden="true"/><ArrowUpRight size={13}/>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="papaya-preview-footer"><span><Brain size={12}/>{de ? "KONTEXT BLEIBT VERBUNDEN" : "CONTEXT STAYS CONNECTED"}</span><span>{de ? "FOKUS" : "FOCUS"}<b /></span></div>
+      </div>
+      <div className="papaya-floating-note papaya-floating-note--memory"><Brain size={13}/><span>MEMORY<small>{de ? "Wissen verbunden" : "Context connected"}</small></span><i /></div>
+      <div className="papaya-floating-note papaya-floating-note--goals"><Target size={13}/><span>{de ? "ZIELE" : "GOALS"}<small>{de ? "Nächster Schritt" : "Next step"}</small></span><ArrowUpRight size={12}/></div>
+    </div>
+  );
+}
+
+function PapayaCoreSeal({ state, lang }: { state: string; lang: Language }) {
+  const de = lang === "de";
+  return <div className="papaya-core-seal" data-state={state || "idle"} aria-label={de ? "Papaya Core aktiv" : "Papaya Core active"}>
+    <span className="papaya-seal-orbit papaya-seal-orbit--a"/><span className="papaya-seal-orbit papaya-seal-orbit--b"/>
+    <span className="papaya-seal-arc"/><span className="papaya-seal-point papaya-seal-point--a"/><span className="papaya-seal-point papaya-seal-point--b"/>
+    <span className="papaya-seal-mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C14 11 9 20 10 29c1 8 7 14 14 14s13-6 14-14C39 20 34 11 24 5Z" fill="url(#papaya-seal-gradient)"/><path d="M24 17c-4 4-6 8-5 13 .6 3.1 2.3 5.5 5 7 2.7-1.5 4.4-3.9 5-7 1-5-1-9-5-13Z" fill="#421d19"/><path d="M24 8c0 5-2 8-6 11" fill="none" stroke="#ffd5ab" strokeWidth="1.4" strokeLinecap="round"/><defs><linearGradient id="papaya-seal-gradient" x1="9" y1="8" x2="38" y2="42" gradientUnits="userSpaceOnUse"><stop stopColor="#ffd08f"/><stop offset=".48" stopColor="#ff7544"/><stop offset="1" stopColor="#e73362"/></linearGradient></defs></svg></span>
+    <span className="papaya-seal-caption">PAPAYA<span>CORE</span></span>
+  </div>;
+}
+
+export function FocusConstellation({ agents, bigThree, activeSpeakingAgentId, state, onSelectAgent, onOpenChat, lang }: {
   agents: AgentConfig[];
   bigThree: boolean;
   activeSpeakingAgentId: string | null;
@@ -24,7 +83,7 @@ export function FocusConstellation({ agents, bigThree, activeSpeakingAgentId, st
     <div className="focus-constellation">
       <div className="focus-constellation-label"><Sparkles size={12}/>{bigThree ? "THE BIG 3" : (lang === "de" ? "GEMEINSAM WEITERDENKEN" : "THINKING TOGETHER")}</div>
       <svg className="focus-constellation-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><ellipse cx="50" cy="47" rx="36" ry="34"/><ellipse cx="50" cy="47" rx="22" ry="21"/>{satellites.map((agent, index) => { const [x, y] = positions[index % positions.length]; return <line key={agent.id} x1="50" y1="47" x2={x} y2={y} />; })}</svg>
-      <div className="focus-constellation-center"><ParticleVoiceOrb responsive type="custom" primaryColor="#ff985d" state={state} intensity={state === "speaking" ? speakingLevel : state === "listening" ? micLevel : .08} isLive={state === "speaking" || state === "listening"} enableDrag={false}/><button onClick={onOpenChat} aria-label={lang === "de" ? "Gemeinsamen Chat öffnen" : "Open shared conversation"}>{center?.short || "PAPAYA"}<ArrowUpRight size={11}/></button></div>
+      <div className="focus-constellation-center"><PapayaCoreSeal state={state} lang={lang}/><button onClick={onOpenChat} aria-label={lang === "de" ? "Gemeinsamen Chat öffnen" : "Open shared conversation"}>{center?.short || "PAPAYA"}<ArrowUpRight size={11}/></button></div>
       {satellites.map((agent, index) => { const [x, y] = positions[index % positions.length]; return <button key={agent.id} className="focus-constellation-node" style={{ left: `${x}%`, top: `${y}%`, '--core-color': agent.color } as React.CSSProperties} onClick={() => onSelectAgent?.(agent)} disabled={!onSelectAgent} aria-label={`${lang === "de" ? "Zu" : "Switch to"} ${agent.name}${lang === "de" ? " wechseln" : ""}`} data-speaking={activeSpeakingAgentId === agent.id && state === "speaking"}><span className="focus-agent-light"/><strong>{agent.short}</strong></button>; })}
       <button className="focus-constellation-chat" onClick={onOpenChat}><MessageSquare size={13}/>{lang === "de" ? "Gemeinsamen Chat öffnen" : "Open shared conversation"}<ArrowUpRight size={12}/></button>
     </div>

@@ -51,6 +51,45 @@ interface ConstellationNode {
   pos: THREE.Vector3;
 }
 
+const MODERN_NODE_LAYOUT: Record<string, { x: number; y: number; delay: number }> = {
+  neo: { x: 18, y: 24, delay: 0 }, globe: { x: 50, y: 15, delay: 80 }, vega: { x: 82, y: 24, delay: 160 },
+  oracle: { x: 12, y: 55, delay: 240 }, odin: { x: 88, y: 55, delay: 320 }, chronos: { x: 29, y: 83, delay: 400 }, pulse: { x: 71, y: 83, delay: 480 },
+};
+
+function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart }: {
+  nodes: ConstellationNode[];
+  agents: AgentConfig[];
+  currentAgent: AgentConfig;
+  onStart: (agentId: string) => void;
+}) {
+  const agentFor = (node: ConstellationNode) => agents.find(agent => agent.id === (node.id === "maze" ? "syntax" : node.id));
+  const satellites = nodes.filter(node => !node.isCenter);
+  return (
+    <main className="papaya-network-stage" aria-label="PapayaOS agent network">
+      <div className="papaya-network-heading"><span>DEIN KI-TEAM</span><strong>Dein Team. Dein nächster Schritt.</strong><small>Wähle einen Core. Dein Workspace bleibt verbunden.</small></div>
+      <svg className="papaya-network-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        {satellites.map(node => { const p = MODERN_NODE_LAYOUT[node.id]; return p ? <g key={node.id} style={{ "--network-color": node.hexColor, "--line-delay": `${p.delay}ms` } as React.CSSProperties}><path d={`M 50 51 Q ${(50 + p.x) / 2} ${(51 + p.y) / 2 - 3} ${p.x} ${p.y}`} /><circle cx={p.x} cy={p.y} r=".38" /></g> : null; })}
+      </svg>
+      {satellites.map(node => {
+        const p = MODERN_NODE_LAYOUT[node.id];
+        const agent = agentFor(node);
+        if (!p || !agent) return null;
+        return <button key={node.id} className="papaya-network-agent" style={{ left: `${p.x}%`, top: `${p.y}%`, "--node-color": node.hexColor, "--node-delay": `${p.delay}ms` } as React.CSSProperties} onClick={() => onStart(agent.id)} aria-label={`Start ${agent.name}`}>
+          <span className="papaya-network-agent-mark">{agent.railLetter || agent.short?.[0]}</span><span className="papaya-network-agent-copy"><strong>{node.name}</strong><small>{node.sub}</small></span><ArrowRight className="papaya-network-agent-arrow" size={14}/>
+        </button>;
+      })}
+      <div className="papaya-network-hub" style={{ "--hub-color": currentAgent.color || "#ff7544" } as React.CSSProperties}>
+        <span className="papaya-network-hub-eyebrow"><i/>PAPAYA OS <b/> CORE</span>
+        <span className="papaya-network-hub-mark">P</span>
+        <strong>{currentAgent.name}</strong>
+        <small>{currentAgent.tag}</small>
+        <button onClick={() => onStart(currentAgent.id)}>Workspace öffnen <ArrowRight size={14}/></button>
+      </div>
+      <div className="papaya-network-footnote"><span><i/>8 CORES BEREIT</span><span>EIN GEMEINSAMER WORKSPACE</span></div>
+    </main>
+  );
+}
+
 export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> = ({
   agents,
   currentAgentId,
@@ -143,6 +182,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
 
   // Main Three.js Engine Lifecycle
   useEffect(() => {
+    if (isModern) return;
     const mount = canvasMountRef.current;
     if (!mount) return;
 
@@ -883,7 +923,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
       }
       renderer.dispose();
     };
-  }, [allPrimaryNodes]);
+  }, [allPrimaryNodes, isModern]);
 
   const activeNodeAgentId = hoveredNodeId === "maze" ? "syntax" : hoveredNodeId;
   const activeHoveredAgent = agents.find((a) => a.id === (activeNodeAgentId || currentAgentId)) || agents[0];
@@ -1125,15 +1165,15 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
 
           <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/[0.09] bg-[#120e10]/55 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="px-3 pb-2 pt-2 text-[9px] font-bold tracking-[0.18em] text-zinc-500">DEINE SPEZIALISTEN <span className="ml-1 text-[#ff9b75]">08</span></div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {allPrimaryNodes.map((node) => {
                 const agentId = node.id === "maze" ? "syntax" : node.id;
                 const agent = agents.find((item) => item.id === agentId);
                 const active = activeHoveredAgent.id === agentId;
                 if (!agent) return null;
                 return (
-                  <button key={node.id} onMouseEnter={() => setHoveredNodeId(node.id)} onMouseLeave={() => setHoveredNodeId(null)} onClick={() => { setSelectedAnimId(node.id); setHoveredNodeId(node.id); playHudSound(720, "sine", 0.07); }} className={`group flex w-full items-center gap-3 rounded-[15px] border px-3 py-2.5 text-left transition-all ${active ? "border-white/[0.13] bg-white/[0.07]" : "border-transparent hover:border-white/[0.08] hover:bg-white/[0.045]"}`}>
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border font-semibold" style={{ color: node.hexColor, borderColor: `${node.hexColor}55`, background: `${node.hexColor}12` }}>{agent.railLetter}</span>
+                  <button key={node.id} onMouseEnter={() => setHoveredNodeId(node.id)} onMouseLeave={() => setHoveredNodeId(null)} onClick={() => { setSelectedAnimId(node.id); setHoveredNodeId(node.id); playHudSound(720, "sine", 0.07); }} className={`group flex w-full items-center gap-2 rounded-[13px] border px-3 py-0.5 text-left transition-all ${active ? "border-white/[0.13] bg-white/[0.07]" : "border-transparent hover:border-white/[0.08] hover:bg-white/[0.045]"}`}>
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] border font-semibold" style={{ color: node.hexColor, borderColor: `${node.hexColor}55`, background: `${node.hexColor}12` }}>{agent.railLetter}</span>
                     <span className="min-w-0 flex-1"><span className="block truncate font-sans text-[13px] font-semibold text-white">{node.isCenter ? "Papaya" : agent.name}</span><span className="mt-0.5 block truncate font-sans text-[10px] text-zinc-400">{node.sub}</span></span>
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition ${active ? "scale-125" : "opacity-50"}`} style={{ background: node.hexColor, boxShadow: active ? `0 0 10px ${node.hexColor}` : undefined }} />
                   </button>
@@ -1149,11 +1189,14 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         </section>
       )}
 
-      {/* 3. Three.js Mount Stage */}
-      <div ref={canvasMountRef} className="fixed inset-0 bottom-0 z-[1] cursor-crosshair lg:left-[26%] lg:top-[84px] lg:bottom-[104px]" />
+      {isModern ? (
+        <ModernAgentWorkspace nodes={allPrimaryNodes} agents={agents} currentAgent={activeHoveredAgent} onStart={onSelectAgentAndStart} />
+      ) : (
+        <div ref={canvasMountRef} className="fixed inset-0 bottom-0 z-[1] cursor-crosshair" />
+      )}
 
       {/* 4. Projected HTML Labels for Primary Cores */}
-      {allPrimaryNodes.map((node) => {
+      {!isModern && allPrimaryNodes.map((node) => {
         const isHovered = hoveredNodeId === node.id;
         const isAllowed = isAgentAllowed(userRole, node.id);
         const reqRole = getMinRequiredRoleForAgent(node.id);

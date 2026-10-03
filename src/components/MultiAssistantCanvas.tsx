@@ -38,7 +38,7 @@ import { ChronosCalendarWidget } from "./ChronosCalendarWidget";
 import { LiquidJellyNav } from "./LiquidJellyNav";
 import { AetherChatCard } from "./AetherChatCard";
 import { PapayaConstellationBackground } from "./PapayaConstellationBackground";
-import { FocusCanvasLayout, FocusConstellation } from "./FocusCanvasLayout";
+import { FocusCanvasLayout, FocusConstellation, PapayaWorkspaceVisual } from "./FocusCanvasLayout";
 
 interface MultiAssistantCanvasProps {
   focusDesign?: boolean;
@@ -411,16 +411,20 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
                 {(isActive || isPrev) && (
                   (resolvedShape === "particle-orb" || (focusDesign && resolvedShape === "auto")) ? (
                     <div className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-auto">
-                      <ParticleVoiceOrb
-                        responsive
-                        type="custom"
-                        primaryColor={resolvedColor}
-                        intensity={isActive ? (state === "speaking" ? Math.max(0.3, speakingLevel) : state === "listening" ? Math.max(0.3, micLevel) : 0.08) : 0}
-                        isLive={isActive && (state === "speaking" || state === "listening")}
-                        state={isActive ? state : "idle"}
-                        themeStyle="modern"
-                        enableDrag={!focusDesign}
-                      />
+                      {focusDesign ? (
+                        <PapayaWorkspaceVisual agents={agents} currentAgent={agent} state={isActive ? state : "idle"} onSelectAgent={onSelectAgent} lang={lang} />
+                      ) : (
+                        <ParticleVoiceOrb
+                          responsive
+                          type="custom"
+                          primaryColor={resolvedColor}
+                          intensity={isActive ? (state === "speaking" ? Math.max(0.3, speakingLevel) : state === "listening" ? Math.max(0.3, micLevel) : 0.08) : 0}
+                          isLive={isActive && (state === "speaking" || state === "listening")}
+                          state={isActive ? state : "idle"}
+                          themeStyle="modern"
+                          enableDrag
+                        />
+                      )}
                     </div>
                   ) : (
                     <ParticleSphere
