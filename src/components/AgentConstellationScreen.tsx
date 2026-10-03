@@ -891,9 +891,14 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
       ref={containerRef}
       className={`fixed inset-0 z-50 font-mono select-none overflow-hidden transition-colors duration-700 ${
         isModern
-          ? "bg-[radial-gradient(ellipse_at_center,_#1d1033_0%,_#0b0616_50%,_#040407_100%)] text-zinc-100"
+          ? "bg-[#090809] text-zinc-100"
           : "bg-black text-cyan-400"
       }`}
+      style={{
+        background: isModern
+          ? "radial-gradient(ellipse at 54% 48%, #3b1d25 0%, #1f1019 42%, #090809 100%)"
+          : undefined,
+      }}
     >
       {/* 1. Cinematic Scanlines & Vignette Overlays (Cyberpunk Only) */}
       {!isModern && (
@@ -909,16 +914,23 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         className="fixed inset-0 pointer-events-none z-[4]"
         style={{
           background: isModern
-            ? "radial-gradient(ellipse at center, transparent 55%, rgba(4,4,7,0.85) 100%)"
+            ? "radial-gradient(ellipse at center, transparent 48%, rgba(5,4,5,0.72) 100%)"
             : "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.95) 100%)",
         }}
       />
+
+      {isModern && (
+        <div className="fixed inset-0 z-[5] pointer-events-none overflow-hidden" aria-hidden="true">
+          <div className="absolute -top-48 left-[12%] h-[34rem] w-[34rem] rounded-full bg-[#ff6b35]/[0.055] blur-[100px]" />
+          <div className="absolute -bottom-64 right-[8%] h-[36rem] w-[36rem] rounded-full bg-[#ff3d8d]/[0.045] blur-[120px]" />
+        </div>
+      )}
 
       {/* 2. Top Command Bar */}
       <div
         className={`fixed top-0 left-0 right-0 z-20 flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 backdrop-blur-md text-xs tracking-wider transition-opacity duration-700 ${
           isModern
-            ? "bg-[#09090b]/90 border-b border-zinc-800 text-zinc-300 shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+            ? "bg-[#100d0e]/85 border-b border-white/[0.09] text-zinc-300 shadow-[0_10px_35px_rgba(0,0,0,0.24)]"
             : "bg-black/85 border-b border-cyan-400/25 text-slate-300"
         } ${
           topbarVisible ? "opacity-100" : "opacity-0"
@@ -929,37 +941,37 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
           {/* Brand Emblem */}
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
             isModern
-              ? "bg-zinc-900/90 border-zinc-700/80 shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+              ? "bg-white/[0.045] border-white/[0.12] shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
               : "bg-black/90 border-cyan-500/40 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
           }`}>
             <div className={`w-2 h-2 rounded-full ${
               isModern
-                ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.9)] animate-pulse"
+                ? "bg-[#ff7544] shadow-[0_0_10px_rgba(255,107,53,0.9)] animate-pulse"
                 : "bg-cyan-400 shadow-[0_0_10px_rgba(0,240,255,1)] animate-pulse"
             }`} />
             <span className={`font-mono font-black tracking-[0.22em] text-xs ${
               isModern ? "text-white" : "text-[#00f0ff] drop-shadow-[0_0_10px_rgba(0,240,255,0.9)]"
             }`}>
-              S.Y.N.T.A.X.
+              PAPAYA OS
             </span>
             <span className={`text-[9px] font-mono border-l pl-2 ${
               isModern ? "border-zinc-700 text-zinc-400" : "border-cyan-500/30 text-cyan-300/80"
             }`}>
-              v3.8
+              WORKSPACE
             </span>
           </div>
 
           {/* Visual 8-Cores Micro-Matrix */}
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-mono text-[10.5px] font-bold transition-all shadow-sm ${
             isModern
-              ? "border-purple-500/30 bg-purple-950/30 text-purple-300"
+              ? "border-[#ff7544]/25 bg-[#ff7544]/[0.07] text-[#ffad8d]"
               : "border-cyan-400/40 bg-cyan-950/60 text-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
           }`}>
-            <Cpu className={`w-3.5 h-3.5 ${isModern ? "text-purple-400" : "text-cyan-300"} animate-pulse`} />
-            <span>8/8 CORES LINKED</span>
+            <Cpu className={`w-3.5 h-3.5 ${isModern ? "text-[#ff7544]" : "text-cyan-300"} animate-pulse`} />
+            <span>8 CORES SYNCHRON</span>
             
             {/* Miniature visual core nodes */}
-            <div className={`flex items-center gap-1 pl-2 border-l ${isModern ? "border-purple-500/30" : "border-cyan-400/30"}`}>
+            <div className={`flex items-center gap-1 pl-2 border-l ${isModern ? "border-[#ff7544]/30" : "border-cyan-400/30"}`}>
               {allPrimaryNodes.map((n) => (
                 <span
                   key={n.id}
@@ -1004,11 +1016,11 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
             title={`Design-Stil wechseln: Aktuell ist ${isModern ? "Modern Syntax" : "Cyberpunk Jarvis"}`}
             className={`px-3 py-1.5 rounded-xl border font-mono text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
               isModern
-                ? "border-purple-500/40 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 hover:border-purple-400 shadow-sm"
+                ? "border-white/[0.12] bg-white/[0.045] text-zinc-100 hover:bg-white/[0.09] hover:border-[#ff7544]/50 shadow-sm"
                 : "border-cyan-400/60 bg-cyan-950/70 hover:bg-cyan-500 hover:text-slate-950 text-cyan-200 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
             }`}
           >
-            <Palette className={`w-3.5 h-3.5 ${isModern ? "text-purple-400" : "text-cyan-300"}`} />
+            <Palette className={`w-3.5 h-3.5 ${isModern ? "text-[#ff986f]" : "text-cyan-300"}`} />
             <span>{isModern ? "DESIGN: MODERN" : "DESIGN: CYBERPUNK"}</span>
           </button>
 
@@ -1045,7 +1057,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
             }}
             className={`px-3 py-1.5 rounded-xl border text-[11px] font-black transition cursor-pointer flex items-center gap-1.5 ${
               isModern
-                ? "border-purple-500/60 bg-purple-950/40 hover:bg-purple-900/50 text-purple-300"
+                ? "border-[#ff7544]/30 bg-[#ff7544]/[0.06] hover:bg-[#ff7544]/[0.12] text-[#ffad8d]"
                 : "border-cyan-400 bg-cyan-500/20 hover:bg-cyan-400 hover:text-slate-950 text-cyan-200 shadow-[0_0_20px_rgba(0,240,255,0.4)] animate-pulse"
             }`}
           >
@@ -1058,11 +1070,11 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
               onClick={() => onOpenAgentInspector(activeHoveredAgent.id)}
               className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 isModern
-                  ? "border-zinc-700 bg-zinc-900 hover:bg-purple-950/40 hover:border-purple-500/50 hover:text-purple-200 text-zinc-200"
+                  ? "border-white/[0.12] bg-white/[0.045] hover:bg-[#ff7544]/[0.08] hover:border-[#ff7544]/40 hover:text-[#ffcfbd] text-zinc-200"
                   : "border-cyan-500/40 bg-slate-900/80 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300"
               }`}
             >
-              <Brain className={`w-3.5 h-3.5 ${isModern ? "text-purple-400" : "text-cyan-400"}`} />
+              <Brain className={`w-3.5 h-3.5 ${isModern ? "text-[#ff986f]" : "text-cyan-400"}`} />
               <span className="hidden sm:inline">MEMORY</span>
             </button>
           )}
@@ -1072,11 +1084,11 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
               onClick={onOpenMultiAgentChat}
               className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 isModern
-                  ? "border-zinc-700 bg-zinc-900 hover:bg-purple-950/40 hover:border-purple-500/50 hover:text-purple-200 text-zinc-200"
+                  ? "border-white/[0.12] bg-white/[0.045] hover:bg-[#ff7544]/[0.08] hover:border-[#ff7544]/40 hover:text-[#ffcfbd] text-zinc-200"
                   : "border-cyan-400/60 bg-cyan-950/80 hover:bg-cyan-500 hover:text-slate-950 text-cyan-200"
               }`}
             >
-              <MessageSquare className={`w-3.5 h-3.5 ${isModern ? "text-purple-400" : "text-cyan-400"}`} />
+              <MessageSquare className={`w-3.5 h-3.5 ${isModern ? "text-[#ff986f]" : "text-cyan-400"}`} />
               <span className="hidden sm:inline">CHAT</span>
             </button>
           )}
@@ -1086,7 +1098,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
               onClick={onCloseConstellation}
               className={`p-1.5 rounded-xl border transition cursor-pointer ${
                 isModern
-                  ? "border-zinc-700 bg-zinc-900/90 hover:bg-purple-500/20 hover:border-purple-400 hover:text-purple-300 text-zinc-400"
+                  ? "border-white/[0.12] bg-[#171314]/90 hover:bg-[#ff7544]/[0.12] hover:border-[#ff7544]/50 hover:text-[#ffad8d] text-zinc-400"
                   : "border-zinc-700 bg-zinc-900/90 hover:bg-red-500/20 hover:border-red-400 hover:text-red-300 text-zinc-400"
               }`}
               title="Konstellation schließen"
@@ -1096,6 +1108,20 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
           )}
         </div>
       </div>
+
+      {isModern && (
+        <section className="fixed left-6 top-[88px] z-[6] hidden max-w-[390px] pointer-events-none lg:block" aria-label="PapayaOS Agentenübersicht">
+          <div className="rounded-[24px] border border-white/[0.10] bg-[#120e10]/65 px-5 py-4 shadow-[0_20px_70px_rgba(0,0,0,0.26)] backdrop-blur-xl">
+            <div className="mb-2 flex items-center gap-2 text-[9px] font-bold tracking-[0.2em] text-[#ff9b75]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7544] shadow-[0_0_10px_#ff7544]" /> PAPAYAOS · AUTONOMOUS INTELLIGENCE
+            </div>
+            <h1 className="font-serif text-[clamp(28px,2.5vw,38px)] leading-none tracking-[-0.04em] text-white">
+              Acht Cores. <span className="bg-gradient-to-r from-[#ff7544] to-[#ff4389] bg-clip-text text-transparent">Ein System.</span>
+            </h1>
+            <p className="mt-2 max-w-[42ch] font-sans text-xs leading-5 text-zinc-300/75">Spezialisierte Agenten, synchron für deinen nächsten Gedanken.</p>
+          </div>
+        </section>
+      )}
 
       {/* 3. Three.js Mount Stage */}
       <div ref={canvasMountRef} className="relative w-full h-full cursor-crosshair z-[1]" />
@@ -1177,11 +1203,11 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
                 }}
                 className={`mt-1 px-2 py-0.5 rounded-full font-mono text-[8px] font-bold tracking-wider uppercase transition flex items-center gap-1 mx-auto cursor-pointer ${
                   isModern
-                    ? "bg-purple-950/95 border border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.4)] hover:bg-purple-600 hover:text-white"
+                    ? "bg-[#211211]/95 border border-[#ff7544]/60 text-[#ffd0bd] shadow-[0_0_10px_rgba(255,117,68,0.25)] hover:bg-[#a9412b] hover:text-white"
                     : "bg-cyan-950/95 border border-cyan-400 text-cyan-200 shadow-[0_0_10px_rgba(0,240,255,0.5)] hover:bg-cyan-500 hover:text-slate-950"
                 }`}
               >
-                <Brain className={`w-2.5 h-2.5 ${isModern ? "text-purple-300" : "text-cyan-300"}`} />
+                <Brain className={`w-2.5 h-2.5 ${isModern ? "text-[#ffad8d]" : "text-cyan-300"}`} />
                 <span>MEMORY</span>
               </button>
             )}
@@ -1194,7 +1220,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
         <div
           className={`fixed bottom-4 right-4 sm:right-6 z-20 max-w-sm sm:max-w-md p-3.5 rounded-2xl backdrop-blur-xl border transition-all duration-300 shadow-2xl flex items-center justify-between gap-3 text-xs ${
             isModern
-              ? "bg-zinc-950/90 border-zinc-800/80 shadow-[0_15px_40px_rgba(0,0,0,0.85)] text-zinc-200"
+              ? "bg-[#151011]/90 border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.48)] text-zinc-200"
               : "bg-black/90 border-cyan-400/40 shadow-[0_0_35px_rgba(0,240,255,0.25)] text-slate-200"
           }`}
         >
@@ -1205,7 +1231,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
                 backgroundColor: `${activeHoveredAgent.color}20`,
                 color: activeHoveredAgent.color,
               }}
-              className="w-10 h-10 rounded-xl border flex items-center justify-center font-black text-lg shrink-0 shadow-[0_0_15px_rgba(53,231,255,0.3)]"
+                className="w-10 h-10 rounded-xl border flex items-center justify-center font-black text-lg shrink-0 shadow-[0_0_15px_rgba(255,117,68,0.22)]"
             >
               {activeHoveredAgent.railLetter}
             </div>
@@ -1218,7 +1244,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
                   {activeHoveredAgent.name}
                 </span>
                 <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase ${
-                  isModern ? "bg-zinc-900 border-zinc-700 text-zinc-300" : "bg-black/80 border-white/10 text-slate-300"
+                  isModern ? "bg-white/[0.06] border-white/[0.12] text-zinc-300" : "bg-black/80 border-white/10 text-slate-300"
                 }`}>
                   {activeHoveredAgent.short}
                 </span>
@@ -1236,7 +1262,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
                   playHudSound(880, "triangle", 0.12);
                   onOpenMobileVoice();
                 }}
-                className="px-3 py-2 rounded-xl bg-gradient-to-r from-pink-500/30 to-cyan-500/30 border border-pink-400/80 hover:border-pink-300 text-pink-200 hover:text-white font-mono font-bold text-xs tracking-wider flex items-center gap-1.5 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(236,72,153,0.3)] shrink-0"
+                className="px-3 py-2 rounded-xl bg-gradient-to-r from-[#ff7544]/20 to-[#ff4389]/20 border border-[#ff7544]/50 hover:border-[#ff4389] text-[#ffd0bd] hover:text-white font-mono font-bold text-xs tracking-wider flex items-center gap-1.5 transition cursor-pointer hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(255,117,68,0.18)] shrink-0"
                 title="Handy Sprach-Interface starten"
               >
                 <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
@@ -1251,8 +1277,8 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
                 setTimeout(() => onSelectAgentAndStart(activeHoveredAgent.id), 250);
               }}
               style={{
-                backgroundColor: `${activeHoveredAgent.color}25`,
-                borderColor: activeHoveredAgent.color,
+                background: isModern ? "linear-gradient(105deg, #ff7544, #ff4389)" : `${activeHoveredAgent.color}25`,
+                borderColor: isModern ? "#ff7544" : activeHoveredAgent.color,
                 color: "#ffffff",
               }}
               className="px-3.5 py-2 rounded-xl border font-bold text-xs tracking-wider flex items-center gap-1.5 transition cursor-pointer hover:scale-105 active:scale-95 shadow-md shrink-0"
@@ -1272,7 +1298,7 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
               playHudSound(900, "sawtooth", 0.1);
               onOpenMobileVoice();
             }}
-            className="px-4 py-2.5 rounded-full bg-gradient-to-r from-pink-500 via-purple-600 to-cyan-500 text-white font-mono text-xs font-black tracking-wider flex items-center gap-2 shadow-[0_0_25px_rgba(236,72,153,0.6)] border border-white/40 active:scale-95 cursor-pointer animate-pulse"
+            className="px-4 py-2.5 rounded-full bg-gradient-to-r from-[#ff7544] to-[#ff4389] text-white font-mono text-xs font-black tracking-wider flex items-center gap-2 shadow-[0_0_25px_rgba(255,117,68,0.3)] border border-white/30 active:scale-95 cursor-pointer animate-pulse"
           >
             <Mic className="w-4 h-4 text-white" />
             <span>🎤 HANDY SPRACH-INTERFACE</span>
