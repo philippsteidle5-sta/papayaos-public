@@ -14,6 +14,7 @@ import { UserRole, isAgentAllowed, getMinRequiredRoleForAgent } from "../rbac";
 import { AgentCinematicShowcaseModal } from "./AgentCinematicShowcaseModal";
 import { SyntaxSpatialGenesisAnimation } from "./SyntaxSpatialGenesisAnimation";
 import { useTheme } from "../utils/themeStore";
+import "./papaya-deck.css";
 
 interface AgentConstellationScreenProps {
   agents: AgentConfig[];
@@ -53,49 +54,63 @@ function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart, onVoice }:
 }) {
   const agentFor = (node: ConstellationNode) => agents.find(agent => agent.id === (node.id === "maze" ? "syntax" : node.id));
   const papaya = agents.find(agent => agent.id === "syntax") || currentAgent;
+  const [activeId, setActiveId] = useState(nodes[0]?.id || "maze");
+  const activeNode = nodes.find(node => node.id === activeId) || nodes[0];
+  const activeAgent = activeNode ? agentFor(activeNode) || papaya : papaya;
+  const activeIndex = Math.max(0, nodes.findIndex(node => node.id === activeNode?.id));
+  const stories: Record<string, { line: string; detail: string; action: string }> = {
+    maze: { line: "Alles beginnt mit einem Gedanken.", detail: "Sag Papaya, was dich beschäftigt. Dein System findet mit dir den nächsten Schritt.", action: "Mit Papaya starten" },
+    neo: { line: "Sieh, was andere übersehen.", detail: "N.E.O. hilft dir, Bilder, Oberflächen und visuelle Ideen klarer zu verstehen.", action: "N.E.O. öffnen" },
+    globe: { line: "Frag größer. Finde tiefer.", detail: "G.L.O.B.E. verbindet Recherche, Quellen und Perspektiven zu einem klaren Bild.", action: "G.L.O.B.E. öffnen" },
+    vega: { line: "Mach aus Ideen Richtung.", detail: "V.E.G.A. bringt Struktur in schwierige Aufgaben und macht den nächsten Zug sichtbar.", action: "V.E.G.A. öffnen" },
+    oracle: { line: "Erkenne, was sich verändert.", detail: "O.R.A.C.L.E. ordnet Signale und Muster, damit du Märkte besser einordnen kannst.", action: "O.R.A.C.L.E. öffnen" },
+    odin: { line: "Behalte den Überblick.", detail: "O.D.I.N. führt Aufgaben, Entscheidungen und Abläufe an einem Ort zusammen.", action: "O.D.I.N. öffnen" },
+    chronos: { line: "Gib deiner Zeit Form.", detail: "C.H.R.O.N.O.S. macht aus Vorhaben einen Rhythmus, der in deinen Tag passt.", action: "C.H.R.O.N.O.S. öffnen" },
+    pulse: { line: "Bring Ideen in Bewegung.", detail: "P.U.L.S.E. denkt Inhalte, Menschen und Reichweite gemeinsam mit dir weiter.", action: "P.U.L.S.E. öffnen" },
+  };
+  const story = stories[activeNode?.id] || stories.maze;
   return (
-    <main className="papaya-launch" aria-label="PapayaOS Startbereich">
-      <div className="papaya-launch-shell">
-        <section className="papaya-launch-intro">
-          <div className="papaya-launch-brand"><span className="papaya-launch-brand-mark">P</span><strong>PAPAYA<span>OS</span></strong><i /><small>YOUR OWN INTELLIGENCE</small></div>
-          <div className="papaya-launch-intro-copy">
-            <span className="papaya-launch-eyebrow"><b /> EIN RAUM FÜR ALLES, WAS DU VORHAST</span>
-            <h1>Dein Kopf<br />hat <em>mehr vor.</em></h1>
-            <p>Aus einer Frage wird ein Plan. Aus acht Spezialisten wird dein eigenes KI-System. Starte dort, wo du gerade bist.</p>
-            <div className="papaya-launch-actions">
-              <button className="papaya-launch-primary" onClick={() => onStart(papaya.id)}>Workspace öffnen <ArrowRight size={17} /></button>
-              {onVoice && <button className="papaya-launch-secondary" onClick={onVoice}><Mic size={16} /> Mit Papaya sprechen</button>}
-            </div>
-          </div>
-          <div className="papaya-launch-intro-foot"><span>01 / 08</span><div><strong>Ein gemeinsamer Kontext.</strong><small>Jeder Core bringt seine Stärke ein.</small></div><span className="papaya-launch-foot-line" /></div>
-        </section>
-
-        <section className="papaya-launch-system" aria-label="Dein PapayaOS System">
-          <div className="papaya-launch-feature">
-            <div className="papaya-launch-feature-top"><span>THE PAPAYA SYSTEM <b /> 01</span><span>YOUR WORKSPACE</span></div>
-            <div className="papaya-launch-feature-art" aria-hidden="true">
-              <span className="papaya-launch-axis papaya-launch-axis--one" /><span className="papaya-launch-axis papaya-launch-axis--two" />
-              <span className="papaya-launch-frame papaya-launch-frame--outer" /><span className="papaya-launch-frame papaya-launch-frame--inner" />
-              <span className="papaya-launch-sigil">P</span>
-              <span className="papaya-launch-coordinate papaya-launch-coordinate--top">01: THINK</span>
-              <span className="papaya-launch-coordinate papaya-launch-coordinate--bottom">08: CREATE</span>
-            </div>
-            <div className="papaya-launch-feature-copy"><span>DEIN ZENTRUM</span><h2>Ein Gedanke.<br /><em>Acht Wege.</em></h2><p>Papaya verbindet deine Ideen mit den richtigen Cores und hält alles in einem Workspace zusammen.</p><button onClick={() => onStart(papaya.id)}>Papaya starten <ArrowRight size={16} /></button></div>
-            <div className="papaya-launch-feature-rule" aria-hidden="true" />
-          </div>
-          <div className="papaya-launch-roster-heading"><div><span>DEINE SPEZIALISTEN</span><strong>Wähle deinen Core.</strong></div><small>8 CORES · 1 SYSTEM</small></div>
-          <div className="papaya-launch-roster">
+    <main className="papaya-deck" aria-label="PapayaOS Startbereich" style={{ "--deck-accent": activeNode?.hexColor || "#ff7544" } as React.CSSProperties}>
+      <div className="papaya-deck-shell">
+        <aside className="papaya-deck-rail">
+          <div className="papaya-deck-brand"><span className="papaya-deck-brand-icon">P</span><span><strong>PAPAYA<span>OS</span></strong><small>YOUR OWN INTELLIGENCE</small></span></div>
+          <div className="papaya-deck-rail-heading"><span>DEIN SYSTEM</span><strong>Wähle einen Core</strong></div>
+          <nav className="papaya-deck-nav" aria-label="PapayaOS Cores">
             {nodes.map((node, index) => {
               const agent = agentFor(node);
               if (!agent) return null;
-              return <button key={node.id} className="papaya-launch-core" style={{ "--core-color": node.hexColor, "--core-index": index } as React.CSSProperties} onClick={() => onStart(agent.id)} aria-label={`${agent.name} öffnen`}>
-                <span className="papaya-launch-core-index">{String(index + 1).padStart(2, "0")}</span>
-                <span className="papaya-launch-core-icon">{agent.railLetter || agent.short?.[0]}</span>
-                <span className="papaya-launch-core-copy"><strong>{node.isCenter ? "PAPAYA" : node.name}</strong><small>{node.sub}</small></span>
-                <ArrowRight size={14} className="papaya-launch-core-arrow" />
+              return <button key={node.id} type="button" className="papaya-deck-nav-item" aria-pressed={activeNode?.id === node.id} aria-label={`${node.isCenter ? "PAPAYA" : node.name} auswählen`} style={{ "--item-color": node.hexColor, "--item-index": index } as React.CSSProperties} onMouseEnter={() => setActiveId(node.id)} onFocus={() => setActiveId(node.id)} onClick={() => setActiveId(node.id)}>
+                <span className="papaya-deck-nav-number">{String(index + 1).padStart(2, "0")}</span><span className="papaya-deck-nav-name">{node.isCenter ? "PAPAYA" : node.name}<small>{node.sub}</small></span><ArrowRight size={13} />
               </button>;
             })}
+          </nav>
+          <div className="papaya-deck-rail-foot"><span className="papaya-deck-status-light"/><span><strong>8 Cores verbunden</strong><small>Ein System. Dein Tempo.</small></span></div>
+        </aside>
+
+        <section className="papaya-deck-main" aria-label="Ausgewählter Core" onPointerMove={event => { const rect = event.currentTarget.getBoundingClientRect(); event.currentTarget.style.setProperty("--pointer-x", `${event.clientX - rect.left}px`); event.currentTarget.style.setProperty("--pointer-y", `${event.clientY - rect.top}px`); }}>
+          <div className="papaya-deck-topline"><span><i/> SYSTEM BEREIT <b> / </b> PAPAYAOS</span><span>{String(activeIndex + 1).padStart(2, "0")} <b>/</b> {String(nodes.length).padStart(2, "0")}</span></div>
+          <div className="papaya-deck-stage" key={activeNode?.id}>
+            <div className="papaya-deck-stage-copy">
+              <span className="papaya-deck-kicker"><span>{String(activeIndex + 1).padStart(2, "0")}</span> {activeNode?.sub}</span>
+              <div className="papaya-deck-title-wrap"><span className="papaya-deck-title-outline" aria-hidden="true">{activeNode?.short}</span><h1>{activeNode?.isCenter ? "PAPAYA" : activeNode?.name}</h1></div>
+              <h2>{story.line}</h2>
+              <p>{story.detail}</p>
+              <div className="papaya-deck-stage-actions"><button className="papaya-deck-open" onClick={() => onStart(activeAgent.id)}>{story.action}<ArrowRight size={18}/></button>{onVoice && activeNode?.isCenter && <button className="papaya-deck-voice" onClick={onVoice} aria-label="Mit Papaya sprechen"><Mic size={18}/></button>}</div>
+            </div>
+            <div className="papaya-deck-art" aria-hidden="true">
+              <div className="papaya-deck-halo"/>
+              <svg className="papaya-deck-ribbons" viewBox="0 0 500 500" fill="none">
+                <path className="papaya-deck-ribbon papaya-deck-ribbon--one" d="M55 330C93 168 189 80 292 103c99 22 167 129 140 225-19 70-116 112-211 73C134 365 138 240 229 188c74-42 152 14 137 95-12 67-80 110-143 80" />
+                <path className="papaya-deck-ribbon papaya-deck-ribbon--two" d="M95 120c116-91 258-55 308 32 52 91-5 215-117 240-99 22-205-45-201-139 3-86 87-150 168-133 73 15 105 97 60 160-32 44-95 43-130 4" />
+                <path className="papaya-deck-ribbon papaya-deck-ribbon--three" d="M70 400c85 32 195 3 234-67 45-80-1-167-68-177-72-11-122 54-101 113 18 51 88 80 147 47" />
+                <path className="papaya-deck-ribbon-flow" d="M55 330C93 168 189 80 292 103c99 22 167 129 140 225-19 70-116 112-211 73C134 365 138 240 229 188c74-42 152 14 137 95-12 67-80 110-143 80" />
+              </svg>
+              <span className="papaya-deck-art-ring papaya-deck-art-ring--outer"/><span className="papaya-deck-art-ring papaya-deck-art-ring--inner"/>
+              <span className="papaya-deck-orb"><span>{activeAgent.railLetter || activeNode?.short?.[0] || "P"}</span></span>
+              <span className="papaya-deck-art-caption">{activeNode?.isCenter ? "SOVEREIGN CORE" : activeNode?.sub} <b>●</b> ONLINE</span>
+            </div>
           </div>
+          <div className="papaya-deck-bottom"><div><span>01 — AUSWÄHLEN</span><b/><span>02 — STARTEN</span><b/><span>03 — WEITERDENKEN</span></div><p>Alle Cores bleiben in deinem Workspace verbunden.</p></div>
         </section>
       </div>
     </main>
