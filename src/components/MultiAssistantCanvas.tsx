@@ -38,7 +38,7 @@ import { ChronosCalendarWidget } from "./ChronosCalendarWidget";
 import { LiquidJellyNav } from "./LiquidJellyNav";
 import { AetherChatCard } from "./AetherChatCard";
 import { PapayaConstellationBackground } from "./PapayaConstellationBackground";
-import { FocusCanvasLayout, FocusConstellation, PapayaWorkspaceVisual } from "./FocusCanvasLayout";
+import { FocusCanvasLayout, FocusConstellation } from "./FocusCanvasLayout";
 
 interface MultiAssistantCanvasProps {
   focusDesign?: boolean;
@@ -387,9 +387,11 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
             const defaultAgentColor = agent.color || "#ff6b35";
             const agentOverride = coreStyling?.agentOverrides?.[agent.id];
 
-            const resolvedShape = (agentOverride?.shape && agentOverride.shape !== "auto")
+            const requestedShape = (agentOverride?.shape && agentOverride.shape !== "auto")
               ? agentOverride.shape
               : (customShape && customShape !== "auto" ? customShape : (coreStyling?.shape ?? "auto"));
+            // Focus Canvas "auto" resolves to the live orb, never the static mockup.
+            const resolvedShape = focusDesign && requestedShape === "auto" ? "particle-orb" : requestedShape;
 
             const resolvedColor = (agentOverride?.color && agentOverride.color !== "auto")
               ? agentOverride.color
@@ -409,22 +411,18 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
                 className={`absolute inset-0 w-full h-full ${animClass}`}
               >
                 {(isActive || isPrev) && (
-                  (resolvedShape === "particle-orb" || (focusDesign && resolvedShape === "auto")) ? (
+                  resolvedShape === "particle-orb" ? (
                     <div className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-auto">
-                      {focusDesign ? (
-                        <PapayaWorkspaceVisual agents={agents} currentAgent={agent} state={isActive ? state : "idle"} onSelectAgent={onSelectAgent} lang={lang} />
-                      ) : (
-                        <ParticleVoiceOrb
-                          responsive
-                          type="custom"
-                          primaryColor={resolvedColor}
-                          intensity={isActive ? (state === "speaking" ? Math.max(0.3, speakingLevel) : state === "listening" ? Math.max(0.3, micLevel) : 0.08) : 0}
-                          isLive={isActive && (state === "speaking" || state === "listening")}
-                          state={isActive ? state : "idle"}
-                          themeStyle="modern"
-                          enableDrag
-                        />
-                      )}
+                      <ParticleVoiceOrb
+                        responsive
+                        type="custom"
+                        primaryColor={resolvedColor}
+                        intensity={isActive ? (state === "speaking" ? Math.max(0.3, speakingLevel) : state === "listening" ? Math.max(0.3, micLevel) : 0.08) : 0}
+                        isLive={isActive && (state === "speaking" || state === "listening")}
+                        state={isActive ? state : "idle"}
+                        themeStyle="modern"
+                        enableDrag
+                      />
                     </div>
                   ) : (
                     <ParticleSphere
