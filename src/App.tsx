@@ -1124,7 +1124,8 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.shape === "sphere" && parsed.color === "#00F0FF") {
-          return { ...parsed, shape: "auto", color: "auto" };
+          // Migrate the previous default to a real particle, not the old static preview.
+          return { ...parsed, shape: "particle-orb" };
         }
         return parsed;
       }
@@ -1139,6 +1140,15 @@ export default function App() {
       audioSensitivity: 1.0,
     };
   });
+
+  // Persist style selections immediately so they survive a reload or restart.
+  useEffect(() => {
+    try {
+      localStorage.setItem("jarvis_core_styling_v1", JSON.stringify(coreStyling));
+    } catch (error) {
+      console.warn("Could not persist focus canvas styling", error);
+    }
+  }, [coreStyling]);
 
   const handleToggleWidget = (key: keyof ActiveWidgetsConfig) => {
     setActiveWidgets((prev) => {
