@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
 @import "leaflet/dist/leaflet.css";
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./";
+@source "../index.html";
+@source "../server.ts";
+@source "../public";
 
 /* PapayaOS dashboard refresh: warm, calm surfaces with a focused green accent. */
 .papaya-refresh {
