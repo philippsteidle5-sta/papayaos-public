@@ -14,4 +14,7 @@ dev-dist/
 .env
 .env.local
 data/auth-users.json*
+data/beta-waitlist.json*
+data/papayaos.sqlite*
+data/auth-sessions.json*
 

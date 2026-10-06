@@ -59,7 +59,6 @@ import {
 import {
   AdminInvoiceRecord,
   fetchAllAdminInvoices,
-  getStoredAdminInvoices,
   updateAdminInvoiceStatus,
   exportInvoicesToCsv,
   deleteAdminInvoice,
@@ -107,6 +106,7 @@ import {
 import { UserRole, ROLE_TIER_DETAILS } from "../rbac";
 import { useTheme } from "../utils/themeStore";
 import { HeaderAudioToggle } from "./HeaderAudioToggle";
+import { AdminWaitlistTab } from "./AdminWaitlistTab";
 import {
   playValidationBeep,
   playKeypressSound,
@@ -123,7 +123,7 @@ interface AdminDatabaseModalProps {
   onOpenFullOsirisTool?: () => void;
   currentUserEmail?: string;
   lang?: "de" | "en";
-  initialTab?: "ACCESS_KEYS" | "LEADS" | "SLOTS" | "INVOICES" | "AUDIT" | "OSIRIS";
+  initialTab?: "BETA_WAITLIST" | "ACCESS_KEYS" | "LEADS" | "SLOTS" | "INVOICES" | "AUDIT" | "OSIRIS";
 }
 
 export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
@@ -146,7 +146,7 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
   const [authError, setAuthError] = useState<string>("");
 
   // Tab navigation: ACCESS_KEYS vs LEADS vs SLOTS vs INVOICES vs AUDIT vs OSIRIS
-  const [activeAdminTab, setActiveAdminTab] = useState<"ACCESS_KEYS" | "LEADS" | "SLOTS" | "INVOICES" | "AUDIT" | "OSIRIS">("ACCESS_KEYS");
+  const [activeAdminTab, setActiveAdminTab] = useState<"BETA_WAITLIST" | "ACCESS_KEYS" | "LEADS" | "SLOTS" | "INVOICES" | "AUDIT" | "OSIRIS">("BETA_WAITLIST");
 
   // Sync initialTab when modal opens
   useEffect(() => {
@@ -296,7 +296,7 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
       const invs = await fetchAllAdminInvoices();
       setInvoices(invs);
     } catch {
-      setInvoices(getStoredAdminInvoices());
+      setInvoices([]);
     }
 
     setIsLoading(false);
@@ -757,7 +757,7 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
 
   const paidInvoicesCount = invoices.filter((i) => i.status === "PAID").length;
   const pendingInvoicesCount = invoices.filter((i) => i.status === "PENDING").length;
-  const paymentSuccessRate = invoices.length > 0 ? Math.round((paidInvoicesCount / invoices.length) * 100) : 100;
+  const paymentSuccessRate = invoices.length > 0 ? Math.round((paidInvoicesCount / invoices.length) * 100) : null;
 
   const handleToggleInvoiceStatus = async (inv: AdminInvoiceRecord) => {
     const newStatus = inv.status === "PAID" ? "PENDING" : "PAID";
@@ -1056,8 +1056,20 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
               {isEn ? "Signed in as administrator:" : "Administrator angemeldet:"} <strong>{SUPERADMIN_EMAIL}</strong>
             </div>
 
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-1.5 border-b border-zinc-800 pb-2 overflow-x-auto">
+              {/* Navigation Tabs */}
+              <div className="flex items-center gap-1.5 border-b border-zinc-800 pb-2 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveAdminTab("BETA_WAITLIST")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeAdminTab === "BETA_WAITLIST"
+                    ? "bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-md shadow-orange-500/20"
+                    : "bg-zinc-900 hover:bg-zinc-800 text-orange-300 border border-orange-500/30"
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Beta-Warteliste</span>
+              </button>
               {onOpenConversionAnalytics && (
                 <button
                   type="button"
@@ -1165,6 +1177,8 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
                 </span>
               </button>
             </div>
+
+            {activeAdminTab === "BETA_WAITLIST" && <AdminWaitlistTab />}
 
             {/* TAB 1: ACCESS KEYS */}
             {activeAdminTab === "ACCESS_KEYS" && (
@@ -1844,7 +1858,7 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
                       <TrendingUp className="w-4 h-4 text-cyan-400" />
                     </div>
                     <div className="text-2xl font-extrabold text-cyan-400 mt-1 tracking-tight">
-                      {paymentSuccessRate}%
+                      {paymentSuccessRate === null ? "—" : `${paymentSuccessRate}%`}
                     </div>
                     <span className="text-[10.5px] text-zinc-500 block">
                       {invoices.length} Rechnungen erfasst

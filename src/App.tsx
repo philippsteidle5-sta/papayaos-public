@@ -88,6 +88,7 @@ import { CyberpunkLandingPage } from "./components/CyberpunkLandingPage";
 import { ConversionSalesPage } from "./components/ConversionSalesPage";
 import { MaintenanceModePage } from "./components/MaintenanceModePage";
 import { AdminDatabaseModal } from "./components/AdminDatabaseModal";
+import { PapayaAccessScreen } from "./components/PapayaAccessScreen";
 import { OsirisIntelToolModal } from "./components/OsirisIntelToolModal";
 import { AppAndToolManagerModal } from "./components/AppAndToolManagerModal";
 import { getLinkedAppsContextForPrompt } from "./utils/agentAppLinksStore";
@@ -640,7 +641,22 @@ export default function App() {
   const [jarvisTerminalOpen, setJarvisTerminalOpen] = useState<boolean>(false);
   const [rewardProgramOpen, setRewardProgramOpen] = useState<boolean>(false);
   const [adminDatabaseOpen, setAdminDatabaseOpen] = useState<boolean>(false);
-  const [adminDatabaseInitialTab, setAdminDatabaseInitialTab] = useState<"ACCESS_KEYS" | "LEADS" | "SLOTS" | "INVOICES" | "AUDIT" | "OSIRIS">("ACCESS_KEYS");
+  const [accountLoginOpen, setAccountLoginOpen] = useState<boolean>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("app") === "true" && params.get("login") === "true";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("login")) {
+      url.searchParams.delete("login");
+      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, []);
+  const [adminDatabaseInitialTab, setAdminDatabaseInitialTab] = useState<"BETA_WAITLIST" | "ACCESS_KEYS" | "LEADS" | "SLOTS" | "INVOICES" | "AUDIT" | "OSIRIS">("BETA_WAITLIST");
   const [osirisIntelToolOpen, setOsirisIntelToolOpen] = useState<boolean>(false);
   const [osirisInitialTab, setOsirisInitialTab] = useState<"RADAR" | "TERMINAL" | "WEBVIEW" | "SATELLITES" | "CCTV" | "THREATS">("RADAR");
   const [conversionAnalyticsOpen, setConversionAnalyticsOpen] = useState<boolean>(false);
@@ -1124,7 +1140,9 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.shape === "sphere" && parsed.color === "#00F0FF") {
-          return { ...parsed, shape: "auto", color: "auto" };
+          // Migrate the previous default particle choice to the new neural orb.
+          // Resetting it to "auto" made the Workspace preview reappear after reload.
+          return { ...parsed, shape: "particle-orb" };
         }
         return parsed;
       }
@@ -1139,6 +1157,16 @@ export default function App() {
       audioSensitivity: 1.0,
     };
   });
+
+  // Persist each selection immediately. Requiring the separate layout "Save & Apply"
+  // button made canvas edits appear to work but revert after a reload/restart.
+  useEffect(() => {
+    try {
+      localStorage.setItem("jarvis_core_styling_v1", JSON.stringify(coreStyling));
+    } catch (error) {
+      console.warn("Could not persist focus canvas styling", error);
+    }
+  }, [coreStyling]);
 
   const handleToggleWidget = (key: keyof ActiveWidgetsConfig) => {
     setActiveWidgets((prev) => {
@@ -4438,7 +4466,10 @@ export default function App() {
           />
         ) : (
           <CyberpunkLandingPage
-            onEnterApp={() => {
+            onEnterApp={(email, role) => {
+              if (email?.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase() && role === "FULL_CORE_ADMIN") {
+                setIsAdminUser(true);
+              }
               try {
                 sessionStorage.setItem("syntax_entered_matrix_session", "true");
               } catch {}
@@ -4884,6 +4915,7 @@ export default function App() {
       <FocusCanvasHeader
         lang={lang}
         muted={muted}
+        isAdminUser={isAdminUser}
         onToggleMute={handleToggleMuteAll}
         onToggleLang={handleToggleLang}
         onSettings={() => setSettingsOpen(true)}
@@ -4891,6 +4923,11 @@ export default function App() {
         onMemory={() => setObsidianBrainOpen(true)}
         onGoals={() => handleToggleWidget("goalsWidget")}
         onPlugins={() => handleToggleWidget("appStore")}
+        onOpenAdmin={() => {
+          setAdminDatabaseInitialTab("BETA_WAITLIST");
+          setAdminDatabaseOpen(true);
+        }}
+        onOpenLogin={() => setAccountLoginOpen(true)}
       />
 
       {!isFocusMode && (
@@ -5773,22 +5810,6 @@ export default function App() {
         onOpenAgentInspector={handleOpenAgentInspector}
       />
 
-      {/* CENTRAL ADMIN LEADS & ACCESS CONTROL DATABASE MODAL */}
-      <AdminDatabaseModal
-        isOpen={adminDatabaseOpen}
-        onClose={() => setAdminDatabaseOpen(false)}
-        onOpenConversionAnalytics={() => {
-          setAdminDatabaseOpen(false);
-          setConversionAnalyticsOpen(true);
-        }}
-        onOpenFullOsirisTool={() => {
-          setAdminDatabaseOpen(false);
-          setOsirisIntelToolOpen(true);
-        }}
-        currentUserEmail={SUPERADMIN_EMAIL}
-        lang={lang}
-      />
-
       {/* FULL OSIRIS AI GLOBAL INTELLIGENCE & FLIGHT PLATFORM TOOL MODAL */}
       <OsirisIntelToolModal
         isOpen={osirisIntelToolOpen}
@@ -6069,6 +6090,18 @@ export default function App() {
         onSkip={() => {
           setShowGenesisModal(false);
         }}
+      />
+
+      <PapayaAccessScreen
+        isOpen={accountLoginOpen}
+        onClose={() => setAccountLoginOpen(false)}
+        onSuccess={(email, role) => {
+          setAccountLoginOpen(false);
+          if (email?.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase() && role === "FULL_CORE_ADMIN") {
+            setIsAdminUser(true);
+          }
+        }}
+        lang={lang}
       />
 
       {/* Admin Database Modal (Accessible via hotkey, navbar or master key) */}

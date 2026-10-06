@@ -265,7 +265,7 @@ export const INITIAL_SEEDED_ACCESS_KEYS: AccessKeyRecord[] = [
 /**
  * Returns all stored access keys from database
  */
-export function getAccessKeysDatabase(): AccessKeyRecord[] {
+export function getAccessKeysDatabase(syncWithServer = true): AccessKeyRecord[] {
   try {
     const raw = localStorage.getItem(ACCESS_KEYS_STORAGE_KEY);
     if (raw) {
@@ -292,7 +292,7 @@ export function getAccessKeysDatabase(): AccessKeyRecord[] {
         });
 
         if (needsSave) {
-          saveAccessKeysDatabase(parsed);
+          saveAccessKeysDatabase(parsed, syncWithServer);
         }
         return parsed;
       }
@@ -301,14 +301,14 @@ export function getAccessKeysDatabase(): AccessKeyRecord[] {
     console.error("Failed to load access keys database", e);
   }
 
-  saveAccessKeysDatabase(INITIAL_SEEDED_ACCESS_KEYS);
+  saveAccessKeysDatabase(INITIAL_SEEDED_ACCESS_KEYS, syncWithServer);
   return INITIAL_SEEDED_ACCESS_KEYS;
 }
 
 /**
  * Persists access keys to localStorage and syncs with server API
  */
-export function saveAccessKeysDatabase(keys: AccessKeyRecord[]): void {
+export function saveAccessKeysDatabase(keys: AccessKeyRecord[], syncWithServer = true): void {
   try {
     localStorage.setItem(ACCESS_KEYS_STORAGE_KEY, JSON.stringify(keys));
     broadcastAuthEvent({
@@ -316,7 +316,7 @@ export function saveAccessKeysDatabase(keys: AccessKeyRecord[]): void {
       timestamp: Date.now(),
     });
 
-    if (typeof fetch !== "undefined") {
+    if (syncWithServer && typeof fetch !== "undefined") {
       fetch("/api/access-keys/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -500,7 +500,7 @@ export function extendAccessKeyDuration(idOrKey: string, additionalHours: number
  * PUBLIC / USER: Validate and redeem access key (e.g. "otto")
  * Instant 1-Day Full Sovereign Access to all 8 cores without registration
  */
-export function validateAndRedeemAccessKey(rawKey: string): {
+export function validateAndRedeemAccessKey(rawKey: string, options: { syncWithServer?: boolean } = {}): {
   success: boolean;
   message: string;
   keyRecord?: AccessKeyRecord;
@@ -512,7 +512,7 @@ export function validateAndRedeemAccessKey(rawKey: string): {
   }
 
   // Beta keys grant a limited user session. They never grant admin rights.
-  let keys = getAccessKeysDatabase();
+  let keys = getAccessKeysDatabase(options.syncWithServer !== false);
   const strippedKey = cleanKey.replace(/[\s\-]/g, "").toLowerCase();
   let found = keys.find((k) => {
     const kClean = k.key.trim().toLowerCase();
@@ -540,7 +540,7 @@ export function validateAndRedeemAccessKey(rawKey: string): {
       notes: "Auto-registered Closed Beta Tester Key (16-Digit Full 8-Core Access)",
     };
     keys.unshift(newBetaKey);
-    saveAccessKeysDatabase(keys);
+    saveAccessKeysDatabase(keys, options.syncWithServer !== false);
     found = newBetaKey;
   }
 
@@ -578,7 +578,7 @@ export function validateAndRedeemAccessKey(rawKey: string): {
 
   // 3. Mark key as used & save
   found.usedCount = (found.usedCount || 0) + 1;
-  saveAccessKeysDatabase(keys);
+  saveAccessKeysDatabase(keys, options.syncWithServer !== false);
 
   // 4. Create an automatic user session & lead record for this key user
   const sessionEmail = `key_${found.key.toLowerCase().replace(/[^a-z0-9]/g, "")}@syntax.local`;
@@ -668,6 +668,54 @@ export function validateAndRedeemAccessKey(rawKey: string): {
     keyRecord: found,
     sessionEmail,
   };
+}
+
+/** Validate a beta/access key with the server before applying its local workspace session. */
+export async function validateAndRedeemAccessKeyWithServer(rawKey: string): Promise<ReturnType<typeof validateAndRedeemAccessKey>> {
+  const cleanKey = (rawKey || "").trim();
+  if (!cleanKey) return validateAndRedeemAccessKey(cleanKey, { syncWithServer: false });
+
+  try {
+    const response = await fetch("/api/access-keys/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ key: cleanKey }),
+    });
+    const data = await response.json();
+    if (!response.ok || data?.valid !== true || !data.keyRecord) {
+      return {
+        success: false,
+        message: typeof data?.message === "string" ? data.message : "Dieser Schlüssel konnte nicht bestätigt werden.",
+      };
+    }
+
+    const serverKey = data.keyRecord as AccessKeyRecord;
+    const normalizedKey = serverKey.key.replace(/[\s-]/g, "").toLowerCase();
+    let localKeys: AccessKeyRecord[] = [];
+    try {
+      const stored = localStorage.getItem(ACCESS_KEYS_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed)) localKeys = parsed;
+    } catch {}
+
+    const existingIndex = localKeys.findIndex((candidate) =>
+      candidate.key.replace(/[\s-]/g, "").toLowerCase() === normalizedKey
+    );
+    // The server already counted this redemption. Seed the local copy one use
+    // behind so the local session helper advances it to the same count.
+    const localKey = { ...serverKey, usedCount: Math.max(0, Number(serverKey.usedCount || 0) - 1) };
+    if (existingIndex >= 0) localKeys[existingIndex] = localKey;
+    else localKeys.unshift(localKey);
+    localStorage.setItem(ACCESS_KEYS_STORAGE_KEY, JSON.stringify(localKeys));
+
+    return validateAndRedeemAccessKey(cleanKey, { syncWithServer: false });
+  } catch {
+    return {
+      success: false,
+      message: "Der PapayaOS-Zugangsdienst ist nicht erreichbar. Bitte versuche es erneut.",
+    };
+  }
 }
 
 /**
@@ -1876,7 +1924,12 @@ export async function fetchUserTerminalProfile(userEmail?: string): Promise<Full
   try {
     const cached = localStorage.getItem(LOCAL_USER_TERMINAL_STORAGE_PREFIX + email);
     if (cached) {
-      return JSON.parse(cached);
+      const profile = JSON.parse(cached) as FullUserProfileData;
+      if (Array.isArray(profile.invoices)) {
+        profile.invoices = profile.invoices.filter((invoice) => !["inv_2026_2319", "inv_2026_1711"].includes(invoice.id) && !invoice.id.startsWith("inv_beta_"));
+        localStorage.setItem(LOCAL_USER_TERMINAL_STORAGE_PREFIX + email, JSON.stringify(profile));
+      }
+      return profile;
     }
   } catch {}
 
@@ -1916,71 +1969,7 @@ export async function fetchUserTerminalProfile(userEmail?: string): Promise<Full
       trialEndsAt: trialExpiryDate,
     },
     paymentMethods: [],
-    // Default official invoices matching S.Y.N.T.A.X. Sovereign OS tax records
-    invoices: isSuper ? [
-      {
-        id: "inv_2026_2319",
-        number: "#SYNTAX-INV-2026-2319",
-        date: "20.08.2026",
-        amount: 99.00,
-        netAmount: 80.19,
-        taxAmount: 18.81,
-        currency: "EUR",
-        planName: "1x SOVEREIGN ENTERPRISE Plan (monthly)",
-        status: "PAID",
-        paymentMethodLabel: "PayPal (philippsteidle5@gmail.com)",
-        recipientName: "Philipp Steidle",
-        recipientEmail: email,
-        recipientSlot: 1,
-        quantumToken: "PUBLIC-DEMO-NO-AUTH",
-        features: [
-          "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-          "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-        ],
-      },
-      {
-        id: "inv_2026_1711",
-        number: "#SYNTAX-INV-2026-1711",
-        date: "20.08.2026",
-        amount: 29.00,
-        netAmount: 23.49,
-        taxAmount: 5.51,
-        currency: "EUR",
-        planName: "1x PRO SOVEREIGN CORE Plan (monthly)",
-        status: "PAID",
-        paymentMethodLabel: "PayPal (philippsteidle5@gmail.com)",
-        recipientName: "Philipp Steidle",
-        recipientEmail: email,
-        recipientSlot: 1,
-        quantumToken: "PUBLIC-DEMO-NO-AUTH",
-        features: [
-          "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-          "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-        ],
-      },
-    ] : (isBetaRole ? [
-      {
-        id: `inv_beta_${email.slice(0, 6)}`,
-        number: `#SYNTAX-BETA-PASS`,
-        date: now.toLocaleDateString("de-DE"),
-        amount: 0.00,
-        netAmount: 0.00,
-        taxAmount: 0.00,
-        currency: "EUR",
-        planName: "1x CLOSED BETA TESTER PASS (29€ PRO PLAN 100% GRATIS)",
-        status: "PAID",
-        paymentMethodLabel: "Closed Beta Key Voucher (Kostenlos)",
-        recipientName: registeredLead?.name || "Closed Beta Tester",
-        recipientEmail: email,
-        recipientSlot: registeredLead?.slot || 488,
-        quantumToken: registeredLead?.token || `KEY-BETA-${email.slice(0, 4).toUpperCase()}-9900`,
-        features: [
-          "29€ Pro Plan kostenfrei freigeschaltet für Closed Beta Tester",
-          "Alle 8 Sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.) aktiv",
-          "Keine Zahlungsdaten erforderlich",
-        ],
-      }
-    ] : []),
+    invoices: [],
     resourceUsage: {
       coresActive: 8,
       totalCores: 8,
@@ -2046,32 +2035,7 @@ export async function updateUserPlan(
   profile.subscription.billingCycle = billingCycle;
   profile.subscription.status = "ACTIVE";
 
-  // Add invoice with precise tax and layout details
-  const now = new Date();
-  const grossPrice = prices[newPlanId] || 99;
-  const netPrice = grossPrice === 29 ? 23.49 : grossPrice === 99 ? 80.19 : 242.29;
-  const taxPrice = Math.round((grossPrice - netPrice) * 100) / 100;
-
-  profile.invoices.unshift({
-    id: `inv_${Date.now()}`,
-    number: `#SYNTAX-INV-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-    date: now.toLocaleDateString("de-DE"),
-    amount: grossPrice,
-    netAmount: netPrice,
-    taxAmount: taxPrice,
-    currency: "EUR",
-    planName: `1x ${planNames[newPlanId]} Plan (${billingCycle})`,
-    status: "PAID",
-    paymentMethodLabel: profile.paymentMethods.find((p) => p.isDefault)?.label || `PayPal (${cleanEmail})`,
-    recipientName: profile.name || "Philipp Steidle",
-    recipientEmail: profile.email,
-    recipientSlot: profile.slot || 1,
-    quantumToken: profile.token || "PUBLIC-DEMO-NO-AUTH",
-    features: [
-      "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-      "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-    ],
-  });
+  // A plan change does not prove payment and must not issue an invoice.
 
   try {
     localStorage.setItem(LOCAL_USER_TERMINAL_STORAGE_PREFIX + cleanEmail, JSON.stringify(profile));

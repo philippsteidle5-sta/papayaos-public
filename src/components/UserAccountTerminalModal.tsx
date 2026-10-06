@@ -418,8 +418,8 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    if (newPasswordInput.length < 6) {
-      showToast(lang === "de" ? "Neues Passwort muss mindestens 6 Zeichen haben." : "Password min 6 chars.", "error");
+    if (newPasswordInput.length < 8) {
+      showToast(lang === "de" ? "Neues Passwort muss mindestens 8 Zeichen haben." : "Password min 8 chars.", "error");
       return;
     }
     if (newPasswordInput !== confirmPasswordInput) {
@@ -1632,6 +1632,7 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
                   <label className={`text-[11px] font-bold block mb-1 ${isModern ? "text-zinc-400" : "text-slate-400"}`}>AKTUELLES PASSWORT</label>
                   <input
                     type="password"
+                    required
                     value={currentPasswordInput}
                     onChange={(e) => setCurrentPasswordInput(e.target.value)}
                     placeholder="••••••••"
@@ -1644,13 +1645,15 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
                 </div>
 
                 <div>
-                  <label className={`text-[11px] font-bold block mb-1 ${isModern ? "text-zinc-400" : "text-slate-400"}`}>NEUES PASSWORT (MIN. 6 ZEICHEN)</label>
+                  <label className={`text-[11px] font-bold block mb-1 ${isModern ? "text-zinc-400" : "text-slate-400"}`}>NEUES PASSWORT (MIN. 8 ZEICHEN)</label>
                   <input
                     type="password"
                     required
                     value={newPasswordInput}
                     onChange={(e) => setNewPasswordInput(e.target.value)}
-                    placeholder="Mindestens 6 Zeichen"
+                    minLength={8}
+                    maxLength={256}
+                    placeholder="Mindestens 8 Zeichen"
                     className={`w-full px-4 py-2.5 rounded-xl text-xs outline-none ${
                       isModern
                         ? "bg-zinc-950 border border-zinc-800 text-white focus:border-red-500"

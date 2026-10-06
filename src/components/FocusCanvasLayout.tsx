@@ -1,59 +1,9 @@
 import React, { useRef } from "react";
-import { ArrowUp, ArrowUpRight, Brain, Calendar, ChevronRight, ImageIcon, MapPin, MessageSquare, Mic, Puzzle, SlidersHorizontal, Sparkles, Target, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Brain, Calendar, ChevronRight, ImageIcon, MapPin, MessageSquare, Mic, Puzzle, ShieldCheck, SlidersHorizontal, Sparkles, Target, UserRound, Volume2, VolumeX, X } from "lucide-react";
 import { AgentConfig, CommunicationScope } from "../types";
 import "./focus-canvas.css";
 
 type Language = "de" | "en";
-
-export function PapayaWorkspaceVisual({ agents, currentAgent, state, onSelectAgent, lang }: {
-  agents: AgentConfig[];
-  currentAgent: AgentConfig;
-  state: string;
-  onSelectAgent?: (agent: AgentConfig) => void;
-  lang: Language;
-}) {
-  const de = lang === "de";
-  const collaborators = agents.filter(agent => agent.id !== currentAgent.id).slice(0, 3);
-  const status = state === "listening" ? (de ? "Ich höre zu" : "Listening") : state === "thinking" ? (de ? "Sortiere Gedanken" : "Thinking") : state === "speaking" ? (de ? "Antwort kommt" : "Replying") : (de ? "Bereit für dich" : "Ready when you are");
-  return (
-    <div className="papaya-workspace-visual" data-state={state || "idle"} style={{ "--papaya-agent": currentAgent.color || "#ff7544" } as React.CSSProperties} aria-label={de ? "PapayaOS Workspace Vorschau" : "PapayaOS workspace preview"}>
-      <div className="papaya-visual-aura" aria-hidden="true" />
-      <div className="papaya-preview-window">
-        <div className="papaya-preview-topbar">
-          <span className="papaya-window-mark">P</span>
-          <span className="papaya-window-brand">PAPAYA<span>OS</span></span>
-          <span className="papaya-window-divider" />
-          <span className="papaya-window-view">{de ? "WORKSPACE" : "WORKSPACE"}</span>
-          <span className="papaya-window-live"><i />{de ? "BEREIT" : "READY"}</span>
-        </div>
-
-        <div className="papaya-preview-content">
-          <div className="papaya-preview-kicker"><span>{de ? "DEIN NÄCHSTER SCHRITT" : "YOUR NEXT STEP"}</span><span>01 / 03</span></div>
-          <h2>{de ? "Ein guter Gedanke verdient einen klaren Plan." : "A good thought deserves a clear plan."}</h2>
-          <p>{de ? "Dein Workspace hält Kontext, Agenten und Fortschritt zusammen." : "Your workspace keeps context, agents and momentum together."}</p>
-
-          <div className="papaya-active-agent-card">
-            <div className="papaya-active-agent-icon">{currentAgent.railLetter || "P"}</div>
-            <div className="papaya-active-agent-copy"><span>{de ? "DEIN AGENT" : "YOUR AGENT"}</span><strong>{currentAgent.name}</strong></div>
-            <span className="papaya-agent-state"><i />{status}</span>
-          </div>
-
-          <div className="papaya-flow-label">{de ? "DEINE SPEZIALISTEN" : "YOUR SPECIALISTS"}<span>{agents.length} {de ? "VERFÜGBAR" : "AVAILABLE"}</span></div>
-          <div className="papaya-flow-list">
-            {collaborators.map((agent, index) => (
-              <button key={agent.id} className="papaya-flow-agent" onClick={() => onSelectAgent?.(agent)} disabled={!onSelectAgent} style={{ "--flow-color": agent.color || "#ff7544", "--flow-index": index } as React.CSSProperties}>
-                <span className="papaya-flow-icon">{agent.railLetter || agent.short?.[0] || "•"}</span><span className="papaya-flow-copy"><strong>{agent.name}</strong><small>{agent.tag}</small></span><span className="papaya-flow-link" aria-hidden="true"/><ArrowUpRight size={13}/>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="papaya-preview-footer"><span><Brain size={12}/>{de ? "KONTEXT BLEIBT VERBUNDEN" : "CONTEXT STAYS CONNECTED"}</span><span>{de ? "FOKUS" : "FOCUS"}<b /></span></div>
-      </div>
-      <div className="papaya-floating-note papaya-floating-note--memory"><Brain size={13}/><span>MEMORY<small>{de ? "Wissen verbunden" : "Context connected"}</small></span><i /></div>
-      <div className="papaya-floating-note papaya-floating-note--goals"><Target size={13}/><span>{de ? "ZIELE" : "GOALS"}<small>{de ? "Nächster Schritt" : "Next step"}</small></span><ArrowUpRight size={12}/></div>
-    </div>
-  );
-}
 
 function PapayaCoreSeal({ state, lang }: { state: string; lang: Language }) {
   const de = lang === "de";
@@ -90,9 +40,10 @@ export function FocusConstellation({ agents, bigThree, activeSpeakingAgentId, st
   );
 }
 
-export function FocusCanvasHeader({ lang, muted, onToggleMute, onToggleLang, onSettings, onHome, onMemory, onGoals, onPlugins }: {
+export function FocusCanvasHeader({ lang, muted, isAdminUser, onToggleMute, onToggleLang, onSettings, onHome, onMemory, onGoals, onPlugins, onOpenAdmin, onOpenLogin }: {
   lang: Language;
   muted: boolean;
+  isAdminUser: boolean;
   onToggleMute: () => void;
   onToggleLang: () => void;
   onSettings: () => void;
@@ -100,6 +51,8 @@ export function FocusCanvasHeader({ lang, muted, onToggleMute, onToggleLang, onS
   onMemory: () => void;
   onGoals: () => void;
   onPlugins: () => void;
+  onOpenAdmin: () => void;
+  onOpenLogin: () => void;
 }) {
   const de = lang === "de";
   return (
@@ -119,6 +72,16 @@ export function FocusCanvasHeader({ lang, muted, onToggleMute, onToggleLang, onS
         <button onClick={onPlugins}>Plugins</button>
       </nav>
       <div className="focus-header-tools">
+        {isAdminUser && (
+          <button className="focus-admin-entry" onClick={onOpenAdmin} aria-label={de ? "Admin-Tool öffnen" : "Open admin tool"} title={de ? "Admin-Tool öffnen" : "Open admin tool"}>
+            <ShieldCheck size={15}/><span>{de ? "Admin-Tool" : "Admin Tool"}</span>
+          </button>
+        )}
+        {!isAdminUser && (
+          <button className="focus-account-entry" onClick={onOpenLogin} aria-label={de ? "Mit Konto anmelden" : "Sign in to your account"} title={de ? "Mit Konto anmelden" : "Sign in to your account"}>
+            <UserRound size={15}/><span>Login</span>
+          </button>
+        )}
         <button id="global-header-mute-toggle" onClick={onToggleMute} aria-label={muted ? (de ? "Audio aktivieren" : "Enable audio") : (de ? "Audio stummschalten" : "Mute audio")} aria-pressed={muted}>
           {muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}<span>{muted ? (de ? "Stumm" : "Muted") : "Audio"}</span>
         </button>

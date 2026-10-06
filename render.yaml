@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: papayaos-public
+    runtime: node
+    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && pnpm run build
+    startCommand: pnpm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.21.0
+      - key: NODE_ENV
+        value: production

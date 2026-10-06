@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import crypto from "crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import { GoogleGenAI, GenerateVideosOperation, ThinkingLevel } from "@google/genai";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
@@ -882,6 +883,41 @@ const GEMINI_STYLE_SYSTEM = (agentSystem: string, agentName: string) =>
 
 async function startServer() {
   const app = express();
+  if (process.env.RENDER || process.env.TRUST_PROXY === "true") app.set("trust proxy", 1);
+
+  // SQLite keeps account and beta data on one durable volume without requiring
+  // an external database service for a single-instance beta deployment.
+  const dataDirectory = path.resolve(process.env.PAPAYA_DATA_DIR || process.cwd(), "data");
+  fs.mkdirSync(dataDirectory, { recursive: true, mode: 0o700 });
+  if (process.env.NODE_ENV === "production" && !process.env.PAPAYA_DATA_DIR) {
+    console.warn("[STORAGE] PAPAYA_DATA_DIR is unset. Configure it to point at the host's persistent disk or data may be lost on redeploy.");
+  }
+  const require = createRequire(path.join(process.cwd(), "package.json"));
+  const { DatabaseSync } = require("node:sqlite") as { DatabaseSync: new (filename: string) => any };
+  const persistenceDb = new DatabaseSync(path.join(dataDirectory, "papayaos.sqlite"));
+  persistenceDb.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000; CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  try { fs.chmodSync(path.join(dataDirectory, "papayaos.sqlite"), 0o600); } catch { /* Permissions vary by host. */ }
+
+  function readPersistentState<T>(key: string, fallback: T, legacyFile?: string): T {
+    const row = persistenceDb.prepare("SELECT value FROM app_state WHERE key = ?").get(key) as { value: string } | undefined;
+    if (row) {
+      try { return JSON.parse(row.value) as T; }
+      catch (error) { console.error(`[STORAGE] Invalid saved state for ${key}; using fallback.`, error); return fallback; }
+    }
+    if (legacyFile && fs.existsSync(legacyFile)) {
+      try {
+        const imported = JSON.parse(fs.readFileSync(legacyFile, "utf8")) as T;
+        writePersistentState(key, imported);
+        console.log(`[STORAGE] Imported existing ${path.basename(legacyFile)} into papayaos.sqlite.`);
+        return imported;
+      } catch (error) { console.error(`[STORAGE] Could not import ${legacyFile}.`, error); }
+    }
+    return fallback;
+  }
+
+  function writePersistentState(key: string, value: unknown) {
+    persistenceDb.prepare("INSERT INTO app_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP").run(key, JSON.stringify(value));
+  }
 
   // Enable CORS for external dev server callers
   app.use((req, res, next) => {
@@ -2984,8 +3020,67 @@ User prompt: "${finalPrompt}"`,
   // 🛡️ USER AUTHENTICATION & REGISTRATION BACKEND (FULL CORE ADMIN SYSTEM)
   // =========================================================================
   const SUPERADMIN_EMAIL = "philippsteidle5@gmail.com";
-  const AUTH_DATA_FILE = path.resolve(process.env.PAPAYA_DATA_DIR || process.cwd(), "data", "auth-users.json");
-  const authSessions = new Map<string, { userId: string; expiresAt: number }>();
+  const AUTH_DATA_FILE = path.join(dataDirectory, "auth-users.json");
+  const BETA_WAITLIST_FILE = path.join(dataDirectory, "beta-waitlist.json");
+  type BetaWaitlistEntry = {
+    id: string;
+    email: string;
+    source: string;
+    createdAt: string;
+    status: "NEW" | "CONTACTED" | "INVITED";
+    updatedAt: string;
+  };
+  const loadedWaitlist = readPersistentState<unknown>("beta-waitlist", [], BETA_WAITLIST_FILE);
+  let betaWaitlist: BetaWaitlistEntry[] = Array.isArray(loadedWaitlist) ? loadedWaitlist.filter((entry): entry is BetaWaitlistEntry =>
+    entry && typeof entry.id === "string" && typeof entry.email === "string" &&
+    typeof entry.createdAt === "string" && ["NEW", "CONTACTED", "INVITED"].includes(entry.status)
+  ) : [];
+
+  function saveBetaWaitlist(entries: BetaWaitlistEntry[]) {
+    writePersistentState("beta-waitlist", entries);
+    betaWaitlist = entries;
+  }
+
+  // The landing page records interest only. Signing up does not create an OS account.
+  app.post("/api/beta-waitlist", (req, res) => {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      return res.status(400).json({ ok: false, error: "INVALID_EMAIL" });
+    }
+    if (betaWaitlist.some((entry) => entry.email === email)) {
+      return res.json({ ok: true, alreadyRegistered: true });
+    }
+    const now = new Date().toISOString();
+    const entry: BetaWaitlistEntry = {
+      id: crypto.randomUUID(),
+      email,
+      source: "sales-page",
+      createdAt: now,
+      status: "NEW",
+      updatedAt: now,
+    };
+    try {
+      saveBetaWaitlist([entry, ...betaWaitlist]);
+      return res.status(201).json({ ok: true, alreadyRegistered: false });
+    } catch (error) {
+      console.error("[WAITLIST] Could not save signup:", error);
+      return res.status(500).json({ ok: false, error: "SAVE_FAILED" });
+    }
+  });
+  const loadedSessions = readPersistentState<unknown>("auth-sessions", [], path.join(dataDirectory, "auth-sessions.json"));
+  const validSessions = Array.isArray(loadedSessions) ? loadedSessions.filter((pair: any) =>
+    Array.isArray(pair) && typeof pair[0] === "string" && /^[a-f0-9]{64}$/.test(pair[0]) &&
+    pair[1] && typeof pair[1].userId === "string" && Number.isFinite(pair[1].expiresAt)
+  ) : [];
+  const authSessions = new Map<string, { userId: string; expiresAt: number }>(validSessions);
+
+  function saveSessions() {
+    const now = Date.now();
+    for (const [id, session] of authSessions) if (session.expiresAt <= now) authSessions.delete(id);
+    writePersistentState("auth-sessions", Array.from(authSessions.entries()));
+  }
+
+  const sessionKey = (rawSessionId: string) => crypto.createHash("sha256").update(rawSessionId).digest("hex");
 
   function hashPassword(password: string): string {
     const salt = crypto.randomBytes(16);
@@ -2997,35 +3092,41 @@ User prompt: "${finalPrompt}"`,
     if (!password || !storedHash?.startsWith("scrypt:")) return false;
     const [, saltHex, hashHex] = storedHash.split(":");
     if (!saltHex || !hashHex) return false;
-    const expected = Buffer.from(hashHex, "hex");
-    const actual = crypto.scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
-    return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+    try {
+      const expected = Buffer.from(hashHex, "hex");
+      const salt = Buffer.from(saltHex, "hex");
+      if (expected.length !== 64 || salt.length !== 16) return false;
+      const actual = crypto.scryptSync(password, salt, expected.length);
+      return crypto.timingSafeEqual(expected, actual);
+    } catch { return false; }
   }
 
   function saveAccounts() {
-    fs.mkdirSync(path.dirname(AUTH_DATA_FILE), { recursive: true });
-    const tempFile = `${AUTH_DATA_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(serverUserAccounts, null, 2), { mode: 0o600 });
-    fs.renameSync(tempFile, AUTH_DATA_FILE);
+    writePersistentState("auth-users", serverUserAccounts);
   }
 
   function createSession(user: ServerUserAccount, res: any) {
-    const sessionId = crypto.randomBytes(32).toString("base64url");
-    authSessions.set(sessionId, { userId: user.id, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    const rawSessionId = crypto.randomBytes(32).toString("base64url");
+    authSessions.set(sessionKey(rawSessionId), { userId: user.id, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    saveSessions();
     const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-    res.setHeader("Set-Cookie", `papaya_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${secure}`);
+    res.setHeader("Set-Cookie", `papaya_session=${rawSessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${secure}`);
   }
 
   function getSessionUser(req: any): ServerUserAccount | undefined {
     const cookies = String(req.headers.cookie || "").split(";");
     const raw = cookies.map((part) => part.trim()).find((part) => part.startsWith("papaya_session="));
     const sessionId = raw?.slice("papaya_session=".length);
-    const session = sessionId ? authSessions.get(sessionId) : undefined;
+    const session = sessionId ? authSessions.get(sessionKey(sessionId)) : undefined;
     if (!session || session.expiresAt <= Date.now()) {
-      if (sessionId) authSessions.delete(sessionId);
+      if (sessionId) {
+        authSessions.delete(sessionKey(sessionId));
+        saveSessions();
+      }
       return undefined;
     }
-    return serverUserAccounts.find((account) => account.id === session.userId);
+    const account = serverUserAccounts.find((candidate) => candidate.id === session.userId);
+    return account?.status === "REVOKED" || (account && activeKickedEmails[account.email.toLowerCase()]) ? undefined : account;
   }
 
   interface ServerUserAccount {
@@ -3054,7 +3155,11 @@ User prompt: "${finalPrompt}"`,
     subscription: any;
     paymentMethods: any[];
     invoices: any[];
-  }> = {};
+  }> = readPersistentState("user-billing", {});
+
+  function saveBillingStore() {
+    writePersistentState("user-billing", userBillingStore);
+  }
 
   function getUserBillingData(email: string, userAccount?: any) {
     const cleanEmail = email.toLowerCase();
@@ -3080,76 +3185,15 @@ User prompt: "${finalPrompt}"`,
           trialEndsAt: trialExpiresAt,
         },
         paymentMethods: [],
-        invoices: isSuper ? [
-          {
-            id: "inv_2026_2319",
-            number: "#SYNTAX-INV-2026-2319",
-            date: "20.08.2026",
-            amount: 99.00,
-            netAmount: 80.19,
-            taxAmount: 18.81,
-            currency: "EUR",
-            planName: "1x SOVEREIGN ENTERPRISE Plan (monthly)",
-            status: "PAID",
-            paymentMethodLabel: "PayPal (philippsteidle5@gmail.com)",
-            recipientName: "Philipp Steidle",
-            recipientEmail: "philippsteidle5@gmail.com",
-            recipientSlot: 1,
-            quantumToken: "",
-            features: [
-              "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-              "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-            ],
-          },
-          {
-            id: "inv_2026_1711",
-            number: "#SYNTAX-INV-2026-1711",
-            date: "20.08.2026",
-            amount: 29.00,
-            netAmount: 23.49,
-            taxAmount: 5.51,
-            currency: "EUR",
-            planName: "1x PRO SOVEREIGN CORE Plan (monthly)",
-            status: "PAID",
-            paymentMethodLabel: "PayPal (philippsteidle5@gmail.com)",
-            recipientName: "Philipp Steidle",
-            recipientEmail: "philippsteidle5@gmail.com",
-            recipientSlot: 1,
-            quantumToken: "",
-            features: [
-              "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-              "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-            ],
-          },
-        ] : (isBeta ? [
-          {
-            id: `inv_beta_${Date.now().toString().slice(-4)}`,
-            number: `#SYNTAX-BETA-${Date.now().toString().slice(-4)}`,
-            date: now.toLocaleDateString("de-DE"),
-            amount: 0.00,
-            netAmount: 0.00,
-            taxAmount: 0.00,
-            currency: "EUR",
-            planName: "1x CLOSED BETA TESTER PASS (29€ PRO PLAN 100% GRATIS)",
-            status: "PAID",
-            paymentMethodLabel: "Closed Beta Key Voucher (Kostenlos)",
-            recipientName: userAccount?.name || "Closed Beta Tester",
-            recipientEmail: cleanEmail,
-            recipientSlot: userAccount?.slot || 488,
-            quantumToken: userAccount?.token || `KEY-BETA-${cleanEmail.slice(0, 4).toUpperCase()}-9900`,
-            features: [
-              "29€ Pro Plan kostenfrei freigeschaltet für Closed Beta Tester",
-              "Alle 8 Sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.) aktiv",
-              "Keine Zahlungsdaten erforderlich",
-            ],
-          },
-        ] : []),
+        invoices: [],
       };
+      saveBillingStore();
     } else if (isBeta && userBillingStore[cleanEmail].subscription) {
       userBillingStore[cleanEmail].subscription.planId = "PRO_29";
       userBillingStore[cleanEmail].subscription.planName = "CLOSED BETA TESTER (29€ PRO PLAN INKLUSIVE)";
       userBillingStore[cleanEmail].subscription.priceMonthly = 0;
       userBillingStore[cleanEmail].subscription.status = "ACTIVE";
+      saveBillingStore();
     }
     return userBillingStore[cleanEmail];
   }
@@ -3174,13 +3218,9 @@ User prompt: "${finalPrompt}"`,
     },
   ];
 
-  try {
-    if (fs.existsSync(AUTH_DATA_FILE)) {
-      const stored = JSON.parse(fs.readFileSync(AUTH_DATA_FILE, "utf8"));
-      if (Array.isArray(stored)) serverUserAccounts = stored.filter((account) => account && typeof account.email === "string" && typeof account.passwordHash === "string");
-    }
-  } catch (error) {
-    console.error("[AUTH] Could not load persisted accounts:", error);
+  const storedAccounts = readPersistentState<unknown>("auth-users", null, AUTH_DATA_FILE);
+  if (Array.isArray(storedAccounts)) {
+    serverUserAccounts = storedAccounts.filter((account) => account && typeof account.email === "string" && typeof account.passwordHash === "string");
   }
 
   const configuredAdmin = serverUserAccounts.find((account) => account.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase());
@@ -3190,6 +3230,7 @@ User prompt: "${finalPrompt}"`,
     configuredAdmin.role = "FULL_CORE_ADMIN";
     configuredAdmin.plan = "FULL_CORE_ADMIN";
     configuredAdmin.token = "";
+    saveAccounts();
   }
 
   let serverLeadsDatabase: any[] = [
@@ -3209,6 +3250,10 @@ User prompt: "${finalPrompt}"`,
       notes: "Vorinstallierter Full Core Admin",
     },
   ];
+  const storedLeads = readPersistentState<unknown>("leads", null);
+  if (Array.isArray(storedLeads)) serverLeadsDatabase = storedLeads;
+  const saveLeads = () => writePersistentState("leads", serverLeadsDatabase);
+  if (!Array.isArray(storedLeads)) saveLeads();
 
   let activeKickedEmails: Record<string, { timestamp: number; reason: string }> = {};
 
@@ -3254,6 +3299,7 @@ User prompt: "${finalPrompt}"`,
     }
 
     serverUserAccounts = accountsToKeep;
+    if (freedSlots.length) saveAccounts();
 
     // Sync leads database: remove expired unpaid leads so lead slots are also freed
     serverLeadsDatabase = serverLeadsDatabase.filter((l) => {
@@ -3267,6 +3313,7 @@ User prompt: "${finalPrompt}"`,
       }
       return true;
     });
+    if (freedSlots.length) saveLeads();
 
     return { cleanedCount: freedSlots.length, freedSlots };
   }
@@ -3318,6 +3365,37 @@ User prompt: "${finalPrompt}"`,
       }
     }
     return next();
+  });
+
+  app.get("/api/admin/beta-waitlist", (req, res) => {
+    const admin = getSessionUser(req);
+    if (!admin?.isFullCoreAdmin || admin.email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
+      return res.status(403).json({ ok: false, error: "FORBIDDEN" });
+    }
+    return res.json({ ok: true, entries: betaWaitlist });
+  });
+
+  app.patch("/api/admin/beta-waitlist/:id", (req, res) => {
+    const admin = getSessionUser(req);
+    if (!admin?.isFullCoreAdmin || admin.email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
+      return res.status(403).json({ ok: false, error: "FORBIDDEN" });
+    }
+    const status = String(req.body?.status || "");
+    if (!["NEW", "CONTACTED", "INVITED"].includes(status)) {
+      return res.status(400).json({ ok: false, error: "INVALID_STATUS" });
+    }
+    const index = betaWaitlist.findIndex((entry) => entry.id === req.params.id);
+    if (index < 0) return res.status(404).json({ ok: false, error: "NOT_FOUND" });
+    const updated = { ...betaWaitlist[index], status: status as BetaWaitlistEntry["status"], updatedAt: new Date().toISOString() };
+    const next = [...betaWaitlist];
+    next[index] = updated;
+    try {
+      saveBetaWaitlist(next);
+      return res.json({ ok: true, entry: updated });
+    } catch (error) {
+      console.error("[WAITLIST] Could not update signup:", error);
+      return res.status(500).json({ ok: false, error: "SAVE_FAILED" });
+    }
   });
 
   // GET /api/slots/status - Live Slot Scarcity & Allocation Status
@@ -3380,11 +3458,16 @@ User prompt: "${finalPrompt}"`,
   });
 
   // Email/password accounts use persistent storage and an opaque HttpOnly session cookie.
+  const loginFailures = new Map<string, { count: number; blockedUntil: number; windowEndsAt: number }>();
+  const DUMMY_PASSWORD_HASH = hashPassword(crypto.randomBytes(32).toString("hex"));
+  const LOGIN_FAILURE_LIMIT = 5;
+  const LOGIN_LOCK_MS = 15 * 60 * 1000;
+
   app.post("/api/auth/register", (req, res) => {
     try {
       const { name, email, password, confirmPassword, plan = "ENTERPRISE_99", goal } = req.body || {};
       const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ ok: false, error: "INVALID_EMAIL", message: "Bitte gib eine gültige E-Mail-Adresse ein." });
+      if (cleanEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ ok: false, error: "INVALID_EMAIL", message: "Bitte gib eine gültige E-Mail-Adresse ein." });
       if (typeof password !== "string" || password.length < 8 || password.length > 256) return res.status(400).json({ ok: false, error: "WEAK_PASSWORD", message: "Das Passwort muss mindestens 8 Zeichen lang sein." });
       if (confirmPassword !== password) return res.status(400).json({ ok: false, error: "PASSWORD_MISMATCH", message: "Die Passwörter stimmen nicht überein." });
       if (serverUserAccounts.some((account) => account.email.toLowerCase() === cleanEmail)) return res.status(409).json({ ok: false, error: "ACCOUNT_EXISTS", message: "Für diese E-Mail-Adresse gibt es bereits ein Konto. Bitte melde dich an." });
@@ -3412,6 +3495,7 @@ User prompt: "${finalPrompt}"`,
         registeredAt: now, trialExpiresAt: user.trialExpiresAt, status: user.status,
         token: user.token, goal: typeof goal === "string" ? goal.slice(0, 500) : "PapayaOS Access",
       });
+      saveLeads();
       getUserBillingData(cleanEmail, user);
       createSession(user, res);
       const { passwordHash: _passwordHash, token: _legacyToken, ...publicUser } = user;
@@ -3425,9 +3509,30 @@ User prompt: "${finalPrompt}"`,
   app.post("/api/auth/login", (req, res) => {
     const { email, emailOrKey, password } = req.body || {};
     const cleanEmail = typeof (email || emailOrKey) === "string" ? String(email || emailOrKey).trim().toLowerCase() : "";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || typeof password !== "string" || password.length === 0) return res.status(400).json({ ok: false, error: "MISSING_CREDENTIALS", message: "Bitte gib E-Mail-Adresse und Passwort ein." });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || typeof password !== "string" || password.length === 0 || password.length > 256) return res.status(400).json({ ok: false, error: "MISSING_CREDENTIALS", message: "Bitte gib eine gültige E-Mail-Adresse und dein Passwort ein." });
+    const attemptKey = crypto.createHash("sha256").update(`${req.ip || req.socket.remoteAddress || "unknown"}\0${cleanEmail}`).digest("hex");
+    const now = Date.now();
+    let currentAttempt = loginFailures.get(attemptKey);
+    if (currentAttempt?.blockedUntil && currentAttempt.blockedUntil > now) {
+      res.setHeader("Retry-After", String(Math.ceil((currentAttempt.blockedUntil - now) / 1000)));
+      return res.status(429).json({ ok: false, error: "LOGIN_RATE_LIMITED", message: "Zu viele fehlgeschlagene Versuche. Bitte warte 15 Minuten und versuche es erneut." });
+    }
+    if (currentAttempt && now >= currentAttempt.windowEndsAt) {
+      loginFailures.delete(attemptKey);
+      currentAttempt = undefined;
+    }
     const user = serverUserAccounts.find((account) => account.email.toLowerCase() === cleanEmail);
-    if (!user || !verifyPassword(password, user.passwordHash)) return res.status(401).json({ ok: false, error: "INVALID_CREDENTIALS", message: "E-Mail-Adresse oder Passwort ist falsch." });
+    const passwordMatches = verifyPassword(password, user?.passwordHash || DUMMY_PASSWORD_HASH);
+    if (!user || !passwordMatches) {
+      const failures = (currentAttempt?.count || 0) + 1;
+      const blockedUntil = failures >= LOGIN_FAILURE_LIMIT ? now + LOGIN_LOCK_MS : 0;
+      const windowEndsAt = blockedUntil || currentAttempt?.windowEndsAt || now + LOGIN_LOCK_MS;
+      loginFailures.set(attemptKey, { count: failures, blockedUntil, windowEndsAt });
+      if (loginFailures.size > 5000) loginFailures.delete(loginFailures.keys().next().value as string);
+      if (blockedUntil) res.setHeader("Retry-After", String(Math.ceil(LOGIN_LOCK_MS / 1000)));
+      return res.status(blockedUntil ? 429 : 401).json({ ok: false, error: blockedUntil ? "LOGIN_RATE_LIMITED" : "INVALID_CREDENTIALS", message: blockedUntil ? "Zu viele fehlgeschlagene Versuche. Bitte warte 15 Minuten und versuche es erneut." : "E-Mail-Adresse oder Passwort ist falsch." });
+    }
+    loginFailures.delete(attemptKey);
     if (user.status === "REVOKED" || activeKickedEmails[cleanEmail]) return res.status(403).json({ ok: false, error: "ACCOUNT_REVOKED", message: "Dieses Konto ist gesperrt." });
     user.lastLoginAt = new Date().toISOString();
     saveAccounts();
@@ -3446,8 +3551,12 @@ User prompt: "${finalPrompt}"`,
   app.post("/api/auth/logout", (req, res) => {
     const cookies = String(req.headers.cookie || "").split(";");
     const raw = cookies.map((part) => part.trim()).find((part) => part.startsWith("papaya_session="));
-    if (raw) authSessions.delete(raw.slice("papaya_session=".length));
-    res.setHeader("Set-Cookie", "papaya_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0");
+    if (raw) {
+      authSessions.delete(sessionKey(raw.slice("papaya_session=".length)));
+      saveSessions();
+    }
+    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    res.setHeader("Set-Cookie", `papaya_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secure}`);
     return res.json({ ok: true });
   });
 
@@ -3517,10 +3626,17 @@ User prompt: "${finalPrompt}"`,
       if (status) serverLeadsDatabase[leadIdx].status = status;
       if (notes) serverLeadsDatabase[leadIdx].notes = notes;
     }
+    saveLeads();
+
+    if (status === "REVOKED" || (typeof newPassword === "string" && newPassword.length >= 8)) {
+      for (const [sessionId, session] of authSessions) if (session.userId === user.id) authSessions.delete(sessionId);
+      saveSessions();
+    }
 
     saveAccounts();
 
-    return res.json({ ok: true, message: `Account '${cleanTarget}' erfolgreich aktualisiert.`, user });
+    const { passwordHash: _passwordHash, ...publicUser } = user;
+    return res.json({ ok: true, message: `Account '${cleanTarget}' erfolgreich aktualisiert.`, user: publicUser });
   });
 
   // POST /api/auth/delete-user - Admin endpoint to delete an account
@@ -3538,6 +3654,11 @@ User prompt: "${finalPrompt}"`,
     serverUserAccounts = serverUserAccounts.filter((u) => u.email.toLowerCase() !== cleanTarget);
     saveAccounts();
     serverLeadsDatabase = serverLeadsDatabase.filter((l) => l.email.toLowerCase() !== cleanTarget);
+    saveLeads();
+    for (const [sessionId, session] of authSessions) {
+      if (!serverUserAccounts.some((account) => account.id === session.userId)) authSessions.delete(sessionId);
+    }
+    saveSessions();
 
     return res.json({ ok: true, message: `Account '${cleanTarget}' gelöscht.`, remainingCount: serverUserAccounts.length });
   });
@@ -3545,167 +3666,8 @@ User prompt: "${finalPrompt}"`,
   // =========================================================================
   // 🧾 CENTRAL ADMIN INVOICES & BILLING ENGINE
   // =========================================================================
-  let serverInvoicesList: any[] = [
-    {
-      id: "inv_2026_2319",
-      number: "#SYNTAX-INV-2026-2319",
-      date: "20.08.2026",
-      amount: 99.00,
-      netAmount: 80.19,
-      taxAmount: 18.81,
-      currency: "EUR",
-      planName: "1x SOVEREIGN ENTERPRISE Plan (monthly)",
-      status: "PAID",
-      paymentMethodLabel: "PayPal Express (philippsteidle5@gmail.com)",
-      paymentType: "paypal",
-      recipientName: "Philipp Steidle",
-      recipientEmail: "philippsteidle5@gmail.com",
-      recipientSlot: 1,
-      quantumToken: "",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-        "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-      ],
-      paidAt: "20.08.2026 14:32 Uhr",
-      notes: "Superadmin Root Lifetime Verification & Enterprise Core activation",
-    },
-    {
-      id: "inv_2026_1711",
-      number: "#SYNTAX-INV-2026-1711",
-      date: "14.08.2026",
-      amount: 29.00,
-      netAmount: 23.49,
-      taxAmount: 5.51,
-      currency: "EUR",
-      planName: "1x PRO SOVEREIGN CORE Plan (monthly)",
-      status: "PAID",
-      paymentMethodLabel: "Apple Pay (Touch ID autorisiert)",
-      paymentType: "apple_pay",
-      recipientName: "Philipp Steidle",
-      recipientEmail: "philippsteidle5@gmail.com",
-      recipientSlot: 1,
-      quantumToken: "",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-        "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-      ],
-      paidAt: "14.08.2026 09:15 Uhr",
-      notes: "Pro Core Test-Aktivierung via Apple Pay Express",
-    },
-    {
-      id: "inv_2026_0944",
-      number: "#SYNTAX-INV-2026-0944",
-      date: "04.09.2026",
-      amount: 99.00,
-      netAmount: 80.19,
-      taxAmount: 18.81,
-      currency: "EUR",
-      planName: "1x SOVEREIGN ENTERPRISE Plan (monthly)",
-      status: "PAID",
-      paymentMethodLabel: "Klarna Sofortüberweisung",
-      paymentType: "klarna",
-      recipientName: "Dr. Maximilian von Bergen",
-      recipientEmail: "m.bergen@quantum-labs.de",
-      recipientSlot: 412,
-      quantumToken: "MZ-QUANTUM-MB88-412",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores",
-        "Dedizierte Cluster-Instanz & 256-bit Quantum-Verschlüsselung",
-      ],
-      paidAt: "04.09.2026 18:22 Uhr",
-      notes: "Klarna Sofort Transaktions-ID: KLN-2026-881923",
-    },
-    {
-      id: "inv_2026_0891",
-      number: "#SYNTAX-INV-2026-0891",
-      date: "02.09.2026",
-      amount: 99.00,
-      netAmount: 80.19,
-      taxAmount: 18.81,
-      currency: "EUR",
-      planName: "1x SOVEREIGN ENTERPRISE Plan (monthly)",
-      status: "PAID",
-      paymentMethodLabel: "Google Pay (1-Click)",
-      paymentType: "google_pay",
-      recipientName: "Sarah Lin",
-      recipientEmail: "s.lin@cybernet-systems.com",
-      recipientSlot: 428,
-      quantumToken: "MZ-QUANTUM-SL99-428",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores",
-        "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-      ],
-      paidAt: "02.09.2026 11:45 Uhr",
-      notes: "Autorisiert via Google Pay Tokenization",
-    },
-    {
-      id: "inv_2026_0782",
-      number: "#SYNTAX-INV-2026-0782",
-      date: "28.08.2026",
-      amount: 29.00,
-      netAmount: 23.49,
-      taxAmount: 5.51,
-      currency: "EUR",
-      planName: "1x PRO SOVEREIGN CORE Plan (monthly)",
-      status: "PAID",
-      paymentMethodLabel: "Stripe Visa (•••• 4242)",
-      paymentType: "card",
-      recipientName: "Florian Becker",
-      recipientEmail: "f.becker@dev-studio.org",
-      recipientSlot: 450,
-      quantumToken: "MZ-QUANTUM-FB12-450",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-        "256-bit Quantum-Verschlüsselung",
-      ],
-      paidAt: "28.08.2026 16:10 Uhr",
-      notes: "Stripe 3D-Secure 2.0 Auth ID: ch_3P7aBC42981",
-    },
-    {
-      id: "inv_2026_0655",
-      number: "#SYNTAX-INV-2026-0655",
-      date: "05.09.2026",
-      amount: 198.00,
-      netAmount: 160.38,
-      taxAmount: 37.62,
-      currency: "EUR",
-      planName: "2x SOVEREIGN ENTERPRISE Multi-Seat",
-      status: "PENDING",
-      paymentMethodLabel: "B2B Kauf auf Rechnung (Zahlungsziel 14 Tage)",
-      paymentType: "invoice_transfer",
-      recipientName: "TechVentures DACH GmbH (Hr. Weber)",
-      recipientEmail: "buchhaltung@techventures-dach.de",
-      recipientSlot: 462,
-      quantumToken: "MZ-QUANTUM-TV90-462",
-      features: [
-        "2x Enterprise Lizenz für Software-Architektur Team",
-        "256-bit Quantum-Verschlüsselung & Sammelrechnung",
-      ],
-      notes: "B2B Purchase Order: PO-2026-09-DACH. Warten auf SEPA-Überweisungseingang.",
-    },
-    {
-      id: "inv_2026_0520",
-      number: "#SYNTAX-INV-2026-0520",
-      date: "06.09.2026",
-      amount: 29.00,
-      netAmount: 23.49,
-      taxAmount: 5.51,
-      currency: "EUR",
-      planName: "1x PRO SOVEREIGN CORE Plan (monthly)",
-      status: "PENDING",
-      paymentMethodLabel: "PayPal (Autorisierung ausstehend)",
-      paymentType: "paypal",
-      recipientName: "Julian Mayer",
-      recipientEmail: "j.mayer@alphacode.io",
-      recipientSlot: 471,
-      quantumToken: "MZ-QUANTUM-JM33-471",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores",
-        "256-bit Quantum-Verschlüsselung",
-      ],
-      notes: "Vormerkung für monatlichen Einzug. Erstabbuchung in Bearbeitung.",
-    },
-  ];
+  let serverInvoicesList: any[] = readPersistentState("invoices", []);
+  const saveInvoices = () => writePersistentState("invoices", serverInvoicesList);
 
   // GET /api/admin/invoices - Fetch all invoices across the entire platform
   app.get("/api/admin/invoices", (req, res) => {
@@ -3753,6 +3715,7 @@ User prompt: "${finalPrompt}"`,
     if (notes !== undefined) {
       serverInvoicesList[idx].notes = notes;
     }
+    saveInvoices();
 
     return res.json({
       ok: true,
@@ -3775,6 +3738,7 @@ User prompt: "${finalPrompt}"`,
     } else {
       serverInvoicesList.unshift(invoice);
     }
+    saveInvoices();
 
     return res.json({ ok: true, invoice });
   });
@@ -3787,6 +3751,7 @@ User prompt: "${finalPrompt}"`,
     }
 
     serverInvoicesList = serverInvoicesList.filter((i) => i.id !== invoiceId && i.number !== invoiceId);
+    saveInvoices();
     return res.json({ ok: true, remainingCount: serverInvoicesList.length });
   });
 
@@ -3873,34 +3838,11 @@ User prompt: "${finalPrompt}"`,
       userAccount.plan = planId;
       userAccount.planName = billing.subscription.planName;
       userAccount.priceMonthly = billing.subscription.priceMonthly;
+      saveAccounts();
     }
+    saveBillingStore();
 
-    // Add invoice record with precise tax and layout details
-    const now = new Date();
-    const grossPrice = prices[planId] || 99;
-    const netPrice = grossPrice === 29 ? 23.49 : grossPrice === 99 ? 80.19 : 242.29;
-    const taxPrice = Math.round((grossPrice - netPrice) * 100) / 100;
-
-    billing.invoices.unshift({
-      id: `inv_${Date.now()}`,
-      number: `#SYNTAX-INV-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: now.toLocaleDateString("de-DE"),
-      amount: grossPrice,
-      netAmount: netPrice,
-      taxAmount: taxPrice,
-      currency: "EUR",
-      planName: `1x ${planNames[planId]} Plan (${billingCycle})`,
-      status: "PAID",
-      paymentMethodLabel: billing.paymentMethods.find((p: any) => p.isDefault)?.label || `PayPal (${cleanEmail})`,
-      recipientName: userAccount?.name || "Philipp Steidle",
-      recipientEmail: cleanEmail,
-      recipientSlot: userAccount?.slot || 1,
-      quantumToken: userAccount?.token || "",
-      features: [
-        "Bereitstellung von 8 sovereign KI-Cores (SYNTAX, NEO, VEGA, ODIN, etc.)",
-        "256-bit Quantum-Verschlüsselung & lückenloser Speicher",
-      ],
-    });
+    // A plan change does not prove payment.
 
     console.log(`[USER BILLING] Plan updated for ${cleanEmail} -> ${planId} (${billingCycle})`);
 
@@ -3945,6 +3887,7 @@ User prompt: "${finalPrompt}"`,
     billing.subscription.status = "CANCELLED_PERIOD_END";
     billing.subscription.cancelReason = reason || "Vom Nutzer gekündigt";
     billing.subscription.cancelledAt = new Date().toISOString();
+    saveBillingStore();
 
     console.log(`[USER BILLING] Subscription cancelled for ${cleanEmail} (Reason: ${billing.subscription.cancelReason})`);
 
@@ -3969,6 +3912,7 @@ User prompt: "${finalPrompt}"`,
     billing.subscription.status = "ACTIVE";
     delete billing.subscription.cancelReason;
     delete billing.subscription.cancelledAt;
+    saveBillingStore();
 
     console.log(`[USER BILLING] Subscription reactivated for ${cleanEmail}`);
 
@@ -4021,6 +3965,7 @@ User prompt: "${finalPrompt}"`,
     };
 
     billing.paymentMethods.unshift(newMethod);
+    saveBillingStore();
     console.log(`[USER PAYMENT] Added ${type} payment method for ${cleanEmail}: ${newMethod.label}`);
 
     return res.json({ ok: true, message: `Zahlungsmethode '${newMethod.label}' erfolgreich hinterlegt!`, paymentMethods: billing.paymentMethods });
@@ -4041,6 +3986,7 @@ User prompt: "${finalPrompt}"`,
     if (billing.paymentMethods.length > 0 && !billing.paymentMethods.some((p: any) => p.isDefault)) {
       billing.paymentMethods[0].isDefault = true;
     }
+    saveBillingStore();
 
     return res.json({ ok: true, message: "Zahlungsmethode entfernt.", paymentMethods: billing.paymentMethods });
   });
@@ -4059,6 +4005,7 @@ User prompt: "${finalPrompt}"`,
     billing.paymentMethods.forEach((p: any) => {
       p.isDefault = p.id === paymentMethodId;
     });
+    saveBillingStore();
 
     return res.json({ ok: true, message: "Standard-Zahlungsmethode aktualisiert.", paymentMethods: billing.paymentMethods });
   });
@@ -4066,8 +4013,8 @@ User prompt: "${finalPrompt}"`,
   // POST /api/user/change-password - Change Account Password
   app.post("/api/user/change-password", (req, res) => {
     const { email, currentPassword, newPassword } = req.body;
-    if (!email || !newPassword || String(newPassword).length < 6) {
-      return res.status(400).json({ ok: false, error: "INVALID_PASSWORD", message: "Neues Passwort muss mindestens 6 Zeichen lang sein." });
+    if (!email || typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 256) {
+      return res.status(400).json({ ok: false, error: "INVALID_PASSWORD", message: "Neues Passwort muss zwischen 8 und 256 Zeichen lang sein." });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
@@ -4076,12 +4023,20 @@ User prompt: "${finalPrompt}"`,
       return res.status(404).json({ ok: false, error: "USER_NOT_FOUND", message: "Account nicht gefunden." });
     }
 
-    // If current password provided, verify it
-    if (currentPassword && !verifyPassword(String(currentPassword), user.passwordHash)) {
+    if (typeof currentPassword !== "string" || !verifyPassword(currentPassword, user.passwordHash)) {
       return res.status(401).json({ ok: false, error: "WRONG_PASSWORD", message: "Das aktuelle Passwort ist falsch." });
     }
 
-    user.passwordHash = hashPassword(String(newPassword).trim());
+    user.passwordHash = hashPassword(newPassword);
+    saveAccounts();
+    const cookies = String(req.headers.cookie || "").split(";");
+    const raw = cookies.map((part) => part.trim()).find((part) => part.startsWith("papaya_session="));
+    const currentSessionKey = raw ? sessionKey(raw.slice("papaya_session=".length)) : undefined;
+    for (const [sessionId, session] of authSessions) {
+      if (session.userId === user.id && sessionId !== currentSessionKey) authSessions.delete(sessionId);
+    }
+    saveSessions();
+    createSession(user, res);
     console.log(`[AUTH] Password changed successfully for user: ${cleanEmail}`);
 
     return res.json({ ok: true, message: "Passwort erfolgreich geändert!" });
@@ -4176,6 +4131,8 @@ User prompt: "${finalPrompt}"`,
           notes: newRecord.notes,
         });
       }
+      saveLeads();
+      saveAccounts();
 
       return res.json({
         ok: true,
@@ -4213,6 +4170,7 @@ User prompt: "${finalPrompt}"`,
         const timeB = new Date(b.registeredAt || 0).getTime();
         return timeB - timeA;
       });
+      saveLeads();
 
       // Update any revoked status into kicked list, remove any granted/trial status
       for (const item of serverLeadsDatabase) {
@@ -4247,6 +4205,12 @@ User prompt: "${finalPrompt}"`,
     const userIdx = serverUserAccounts.findIndex((u) => u.email.toLowerCase() === cleanEmail);
     if (userIdx !== -1) {
       serverUserAccounts[userIdx].status = status;
+    }
+    saveLeads();
+    saveAccounts();
+    if (status === "REVOKED" && userIdx !== -1) {
+      for (const [sessionId, session] of authSessions) if (session.userId === serverUserAccounts[userIdx].id) authSessions.delete(sessionId);
+      saveSessions();
     }
 
     if (status === "REVOKED") {
@@ -4283,6 +4247,11 @@ User prompt: "${finalPrompt}"`,
     if (userIdx !== -1) {
       serverUserAccounts[userIdx].status = "REVOKED";
     }
+    saveLeads();
+    saveAccounts();
+    const kickedUserId = serverUserAccounts.find((account) => account.email.toLowerCase() === cleanEmail)?.id;
+    if (kickedUserId) for (const [sessionId, session] of authSessions) if (session.userId === kickedUserId) authSessions.delete(sessionId);
+    saveSessions();
 
     console.log(`[AUTH KICK] Kicking user session immediately: ${cleanEmail}`);
     return res.json({ ok: true, kicked: cleanEmail, timestamp: Date.now() });
@@ -4407,6 +4376,10 @@ User prompt: "${finalPrompt}"`,
       notes: "Offizieller 24h VIP-Key für alle 8 Cores",
     },
   ];
+  const storedAccessKeys = readPersistentState<unknown>("access-keys", null);
+  if (Array.isArray(storedAccessKeys)) serverAccessKeysDatabase = storedAccessKeys;
+  const saveAccessKeys = () => writePersistentState("access-keys", serverAccessKeysDatabase);
+  if (!Array.isArray(storedAccessKeys)) saveAccessKeys();
 
   // GET /api/access-keys - Fetch all access keys
   app.get("/api/access-keys", (req, res) => {
@@ -4421,6 +4394,7 @@ User prompt: "${finalPrompt}"`,
     const { keys } = req.body;
     if (Array.isArray(keys)) {
       serverAccessKeysDatabase = keys;
+      saveAccessKeys();
     }
     return res.json({ ok: true, count: serverAccessKeysDatabase.length, timestamp: Date.now() });
   });
@@ -4479,6 +4453,7 @@ User prompt: "${finalPrompt}"`,
     } else {
       serverAccessKeysDatabase.unshift(newRecord);
     }
+    saveAccessKeys();
 
     return res.json({ ok: true, keyRecord: newRecord, keys: serverAccessKeysDatabase });
   });
@@ -4514,6 +4489,7 @@ User prompt: "${finalPrompt}"`,
         notes: "Auto-registered Closed Beta Tester Key",
       };
       serverAccessKeysDatabase.unshift(found);
+      saveAccessKeys();
     }
 
     if (!found) {
@@ -4536,6 +4512,7 @@ User prompt: "${finalPrompt}"`,
       (strippedKey.length === 16 && /^\d+$/.test(strippedKey));
 
     found.usedCount = (found.usedCount || 0) + 1;
+    saveAccessKeys();
     return res.json({
       valid: true,
       role: isBeta ? "CLOSED_BETA_TESTER" : (found.role || "SOVEREIGN"),

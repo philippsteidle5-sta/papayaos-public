@@ -36,7 +36,6 @@ import { ParticleSphere } from "./ParticleSphere";
 import { UnifiedCoreParticleBall } from "./UnifiedCoreParticleBall";
 import { getAgentSpecialtyData } from "./AgentCinematicShowcaseModal";
 import { registerNewLead, setStoredAdminAuthenticated } from "../utils/leadDatabase";
-import { recordNewCheckoutInvoice } from "../utils/invoiceDatabase";
 
 interface MatrixPricingCardProps {
   onCheckout?: () => void;
@@ -365,37 +364,6 @@ export const MatrixPricingCard: React.FC<MatrixPricingCardProps> = ({
         notes: `Paid 29€ Matrix Passkey: ${randomKey}`,
         device: "Desktop / Browser",
         trialDays: 3,
-      });
-
-      // Record official Invoice in Admin & User Billing Database
-      let methodLabel = "Stripe Kreditkarte";
-      let paymentType: "apple_pay" | "google_pay" | "paypal" | "klarna" | "card" = "card";
-      const lowEmail = (billingEmail || "").toLowerCase();
-      const lowName = (billingName || "").toLowerCase();
-      if (lowEmail.includes("apple") || lowName.includes("apple")) {
-        methodLabel = "Apple Pay Express (Touch ID)";
-        paymentType = "apple_pay";
-      } else if (lowEmail.includes("gpay") || lowName.includes("google")) {
-        methodLabel = "Google Pay (1-Click)";
-        paymentType = "google_pay";
-      } else if (lowEmail.includes("paypal") || lowName.includes("paypal")) {
-        methodLabel = "PayPal Fast (1-Click)";
-        paymentType = "paypal";
-      } else if (lowEmail.includes("klarna") || lowName.includes("klarna")) {
-        methodLabel = "Klarna Sofortüberweisung";
-        paymentType = "klarna";
-      }
-
-      recordNewCheckoutInvoice({
-        name: billingName || "Sovereign Commander",
-        email: billingEmail || "commander@getsyntax.ai",
-        amount: 29.00,
-        planName: "1x PRO SOVEREIGN CORE Plan (monthly)",
-        paymentMethod: methodLabel,
-        paymentType,
-        token: randomKey,
-        status: "PAID",
-        notes: `Erfolgreiche 29€ Matrix-Aktivierung via ${methodLabel}`,
       });
 
       // Save passkey in localStorage so system unlocks immediately
