@@ -99,7 +99,6 @@ import {
   generate16DigitBetaKey,
   SlotStatusResult,
   fetchSlotsStatus,
-  triggerAdminCleanExpiredSlots,
   formatLeadTimestamp,
   syncLeadsWithServer,
 } from "../utils/leadDatabase";
@@ -181,7 +180,6 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   const [accessKeys, setAccessKeys] = useState<AccessKeyRecord[]>([]);
   const [slotsStatus, setSlotsStatus] = useState<SlotStatusResult | null>(null);
-  const [isPurgingSlots, setIsPurgingSlots] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Invoices & Billing Management State
@@ -387,29 +385,6 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
     } catch {}
     setAdminPassword("");
     showToast(isEn ? "Admin session locked." : "Admin-Sitzung gesperrt.", "warn");
-  };
-
-  // Slot purge
-  const handleTriggerSlotClean = async () => {
-    setIsPurgingSlots(true);
-    try {
-      const res = await triggerAdminCleanExpiredSlots(SUPERADMIN_EMAIL);
-      if (res.ok) {
-        showToast(
-          isEn
-            ? `Purge complete: ${res.cleanedCount} unpaid 24h accounts cleaned! ${res.freedSlots.length} slots freed.`
-            : `Bereinigung abgeschlossen: ${res.cleanedCount} unbezahlte 24h-Accounts gelöscht! ${res.freedSlots.length} Slots freigegeben.`,
-          "success"
-        );
-        await refreshData();
-      } else {
-        showToast(res.message || (isEn ? "No expired accounts found." : "Keine abgelaufenen Accounts gefunden."), "warn");
-      }
-    } catch (e: any) {
-      showToast((isEn ? "Purge error: " : "Fehler bei Bereinigung: ") + e.message, "error");
-    } finally {
-      setIsPurgingSlots(false);
-    }
   };
 
   // Access Key Management Handlers
@@ -1753,18 +1728,10 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
                       </p>
                     </div>
 
-                    <button
-                      onClick={handleTriggerSlotClean}
-                      disabled={isPurgingSlots}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 cursor-pointer shadow-lg active:scale-95"
-                    >
-                      <Trash2 className={`w-4 h-4 ${isPurgingSlots ? "animate-spin" : ""}`} />
-                      <span>
-                        {isPurgingSlots
-                          ? (isEn ? "Purging..." : "Bereinige...")
-                          : (isEn ? "Clean Expired 24h Trials" : "Abgelaufene 24h-Tests Bereinigen")}
-                      </span>
-                    </button>
+                    <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
+                      <ShieldCheck className="h-4 w-4 shrink-0" />
+                      <span>{isEn ? "Beta accounts are never deleted automatically." : "Beta-Konten werden nicht automatisch gelöscht."}</span>
+                    </div>
                   </div>
 
                   {/* Progress Bar */}

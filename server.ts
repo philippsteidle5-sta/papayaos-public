@@ -3258,80 +3258,9 @@ User prompt: "${finalPrompt}"`,
   let activeKickedEmails: Record<string, { timestamp: number; reason: string }> = {};
 
   /**
-   * AUTOMATIC 24H EXPIRY & SLOT RECOVERY CLEANUP
-   * Checks every registered account. If 24h passed and NO payment method is linked:
-   * -> Account is wiped/deleted, access revoked, and the slot is freed up for waitlist!
-   */
-  function cleanExpiredUnpaidAccounts(): { cleanedCount: number; freedSlots: number[] } {
-    const now = Date.now();
-    const freedSlots: number[] = [];
-    const accountsToKeep: ServerUserAccount[] = [];
-
-    for (const acc of serverUserAccounts) {
-      const cleanEmail = acc.email.toLowerCase();
-      const isSuper = cleanEmail === SUPERADMIN_EMAIL.toLowerCase();
-      const isVipWhitelisted = cleanEmail.includes("maria") || cleanEmail.includes("steidle");
-
-      if (isSuper || isVipWhitelisted) {
-        accountsToKeep.push(acc);
-        continue;
-      }
-
-      // Check if user has linked any payment method
-      const billing = userBillingStore[cleanEmail];
-      const hasPaymentMethod = Boolean(billing && Array.isArray(billing.paymentMethods) && billing.paymentMethods.length > 0);
-
-      // Check trial expiration timestamp (24h)
-      const trialExpiresMs = acc.trialExpiresAt ? new Date(acc.trialExpiresAt).getTime() : 0;
-      const isTrialExpired = trialExpiresMs > 0 && now >= trialExpiresMs;
-
-      if (isTrialExpired && !hasPaymentMethod) {
-        // EXPIRED WITHOUT PAYMENT METHOD -> DELETE ACCOUNT & FREE UP SLOT
-        freedSlots.push(acc.slot);
-        activeKickedEmails[cleanEmail] = {
-          timestamp: now,
-          reason: `⛔ 24h-Testphase für Slot #${acc.slot} abgelaufen: Account wurde automatisch gelöscht und der Slot für die extrem hohe Nachfrage freigegeben, da keine Zahlungsmethode hinterlegt wurde.`,
-        };
-        console.log(`[AUTO 24H PURGE] Account ${cleanEmail} EXPIRED without payment method. Deleted account and freed Slot #${acc.slot}!`);
-      } else {
-        accountsToKeep.push(acc);
-      }
-    }
-
-    serverUserAccounts = accountsToKeep;
-    if (freedSlots.length) saveAccounts();
-
-    // Sync leads database: remove expired unpaid leads so lead slots are also freed
-    serverLeadsDatabase = serverLeadsDatabase.filter((l) => {
-      const low = l.email.trim().toLowerCase();
-      if (low === SUPERADMIN_EMAIL.toLowerCase() || low.includes("maria")) return true;
-      const billing = userBillingStore[low];
-      const hasPayment = Boolean(billing && Array.isArray(billing.paymentMethods) && billing.paymentMethods.length > 0);
-      const expiresMs = l.trialExpiresAt ? new Date(l.trialExpiresAt).getTime() : 0;
-      if (expiresMs > 0 && now >= expiresMs && !hasPayment) {
-        return false;
-      }
-      return true;
-    });
-    if (freedSlots.length) saveLeads();
-
-    return { cleanedCount: freedSlots.length, freedSlots };
-  }
-
-  // Periodic background cleanup every 30 seconds
-  setInterval(() => {
-    try {
-      cleanExpiredUnpaidAccounts();
-    } catch (e) {
-      console.error("[BACKGROUND CLEANUP ERROR]", e);
-    }
-  }, 30000);
-
-  /**
    * Helper to allocate the next lowest available slot number (2 to 500)
    */
   function allocateNextAvailableSlot(): number | null {
-    cleanExpiredUnpaidAccounts();
     const occupiedSlots = new Set(serverUserAccounts.map((u) => u.slot));
     for (let s = 2; s <= TOTAL_SYSTEM_SLOTS; s++) {
       if (!occupiedSlots.has(s)) {
@@ -3401,7 +3330,6 @@ User prompt: "${finalPrompt}"`,
   // GET /api/slots/status - Live Slot Scarcity & Allocation Status
   app.get("/api/slots/status", (req, res) => {
     const viewer = getSessionUser(req);
-    cleanExpiredUnpaidAccounts();
     const occupiedCount = serverUserAccounts.length;
     const freeSlots = Math.max(0, TOTAL_SYSTEM_SLOTS - occupiedCount);
 
@@ -3435,24 +3363,6 @@ User prompt: "${finalPrompt}"`,
       percentageOccupied: ((occupiedCount / TOTAL_SYSTEM_SLOTS) * 100).toFixed(1),
       slots: viewer?.isFullCoreAdmin ? slotList : [],
       kickedEmails: viewer?.isFullCoreAdmin ? activeKickedEmails : {},
-      timestamp: Date.now(),
-    });
-  });
-
-  // POST /api/admin/clean-expired - Admin trigger to immediately purge expired unpaid slots
-  app.post("/api/admin/clean-expired", (req, res) => {
-    if (!getSessionUser(req)?.isFullCoreAdmin) {
-      return res.status(403).json({ ok: false, error: "UNAUTHORIZED", message: "Nur der Full Core Admin darf Slots bereinigen." });
-    }
-
-    const { cleanedCount, freedSlots } = cleanExpiredUnpaidAccounts();
-    return res.json({
-      ok: true,
-      message: `${cleanedCount} unbezahlte abgelaufene Accounts gelöscht und Slots freigegeben: [${freedSlots.join(", ")}]`,
-      cleanedCount,
-      freedSlots,
-      totalOccupied: serverUserAccounts.length,
-      freeSlots: Math.max(0, TOTAL_SYSTEM_SLOTS - serverUserAccounts.length),
       timestamp: Date.now(),
     });
   });

@@ -2478,37 +2478,3 @@ export async function fetchSlotsStatus(): Promise<SlotStatusResult> {
     timestamp: Date.now(),
   };
 }
-
-/**
- * ADMIN: Trigger purge of expired unpaid 24h accounts and recover slots
- */
-export async function triggerAdminCleanExpiredSlots(adminEmail: string = SUPERADMIN_EMAIL): Promise<{
-  ok: boolean;
-  message: string;
-  cleanedCount: number;
-  freedSlots: number[];
-  freeSlots: number;
-  totalOccupied: number;
-}> {
-  try {
-    const res = await fetch("/api/admin/clean-expired", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adminEmail }),
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (e) {
-    console.warn("Could not clean expired slots via API", e);
-  }
-  return {
-    ok: false,
-    message: "Verbindung zum Backend fehlgeschlagen.",
-    cleanedCount: 0,
-    freedSlots: [],
-    freeSlots: 489,
-    totalOccupied: 11,
-  };
-}
-
