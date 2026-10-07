@@ -264,6 +264,7 @@ export const CommandDashboardLayout = React.memo<CommandDashboardLayoutProps>(({
   children,
 }) => {
   const { theme, toggleTheme, setTheme, isModern } = useTheme();
+  const isEn = lang === "en";
   const [logsFilter, setLogsFilter] = useState<"all" | "info" | "agent">("all");
   const [localInput, setLocalInput] = useState(() => input || inputPrompt || "");
 
@@ -1044,6 +1045,32 @@ export const CommandDashboardLayout = React.memo<CommandDashboardLayoutProps>(({
             <div className="w-full h-full relative z-10 flex items-center justify-center">
               {canvasViewport}
             </div>
+
+            {!messages.some((message) => message.role === "user") && (
+              <div className="absolute z-20 bottom-4 left-4 right-4 mx-auto max-w-2xl rounded-2xl border border-white/10 bg-slate-950/75 p-3 sm:p-4 shadow-2xl backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <div>
+                    <div className="text-xs font-bold text-white">{isEn ? "Start with one useful thing" : "Starte mit einem sinnvollen Schritt"}</div>
+                    <div className="mt-1 text-[10px] text-slate-400">{isEn ? "Chat, memory and goals are ready when you are." : "Chat, Memory und Ziele sind direkt erreichbar."}</div>
+                  </div>
+                  <Sparkles className="w-4 h-4 text-orange-300" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button type="button" onClick={() => actualSetInput(isEn ? "Help me choose the three most important things to focus on this week." : "Hilf mir, die drei wichtigsten Dinge für diese Woche zu priorisieren.")} className="rounded-xl border border-white/10 bg-white/[.04] px-3 py-2.5 text-left transition hover:border-orange-300/40 hover:bg-orange-300/[.06]">
+                    <span className="block text-[11px] font-semibold text-slate-100">{isEn ? "Plan my week" : "Woche planen"}</span>
+                    <span className="mt-1 block text-[10px] text-slate-500">{isEn ? "Start a chat" : "Chat beginnen"}</span>
+                  </button>
+                  <button type="button" onClick={() => onOpenObsidianBrain?.()} className="rounded-xl border border-white/10 bg-white/[.04] px-3 py-2.5 text-left transition hover:border-orange-300/40 hover:bg-orange-300/[.06]">
+                    <span className="block text-[11px] font-semibold text-slate-100">{isEn ? "Review memory" : "Memory ansehen"}</span>
+                    <span className="mt-1 block text-[10px] text-slate-500">{isEn ? "See what is saved" : "Gespeichertes prüfen"}</span>
+                  </button>
+                  <button type="button" onClick={() => actualSetInput(isEn ? "Help me turn one goal into a clear first step for this week." : "Hilf mir, aus einem Ziel einen konkreten ersten Schritt für diese Woche zu machen.")} className="rounded-xl border border-white/10 bg-white/[.04] px-3 py-2.5 text-left transition hover:border-orange-300/40 hover:bg-orange-300/[.06]">
+                    <span className="block text-[11px] font-semibold text-slate-100">{isEn ? "Set a weekly goal" : "Wochenziel setzen"}</span>
+                    <span className="mt-1 block text-[10px] text-slate-500">{isEn ? "Prepare a prompt" : "Anfrage vorbereiten"}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Bottom Floating Command Input Bar */}

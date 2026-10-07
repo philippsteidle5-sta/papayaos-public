@@ -46,7 +46,10 @@ export default defineConfig(() => {
         },
         workbox: {
           navigateFallback: '/sales-preview.html',
-          navigateFallbackDenylist: [/^\/\?app=true$/],
+          navigateFallbackDenylist: [/^\/\?(?:[^&]*&)*app=true(?:&|$)/],
+          skipWaiting: true,
+          clientsClaim: true,
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         },

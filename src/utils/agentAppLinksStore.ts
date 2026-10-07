@@ -163,6 +163,94 @@ export const SYSTEM_APPS_CATALOG: SystemAppDefinition[] = [
 ];
 
 const STORAGE_KEY = "syntax_agent_app_links_v2";
+const WORKFLOW_STORAGE_KEY = "papaya_agent_workflows_v1";
+
+export interface AgentWorkflowSettings {
+  enabledAppIds: string[];
+  customInstructions: string;
+  useMemory: boolean;
+  requireActionApproval: boolean;
+}
+
+function defaultWorkflowSettings(agentId: string): AgentWorkflowSettings {
+  const links = getAppToAgentLinkMap();
+  const normalizedAgent = agentId.toLowerCase();
+  return {
+    enabledAppIds: SYSTEM_APPS_CATALOG
+      .filter((app) => {
+        const linked = links[app.id] || app.defaultAgentId;
+        return linked === normalizedAgent || linked === "all";
+      })
+      .map((app) => app.id),
+    customInstructions: "",
+    useMemory: true,
+    requireActionApproval: true,
+  };
+}
+
+function readWorkflowOverrides(): Record<string, AgentWorkflowSettings> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(WORKFLOW_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (e) {
+    console.warn("Could not parse agent workflows from localStorage", e);
+    return {};
+  }
+}
+
+export function getAgentWorkflowSettings(agentId: string): AgentWorkflowSettings {
+  const saved = readWorkflowOverrides()[agentId.toLowerCase()];
+  if (!saved || typeof saved !== "object") return defaultWorkflowSettings(agentId);
+  const validIds = new Set(SYSTEM_APPS_CATALOG.map((app) => app.id));
+  return {
+    enabledAppIds: Array.isArray(saved.enabledAppIds)
+      ? Array.from(new Set(saved.enabledAppIds.filter((id) => validIds.has(id))))
+      : defaultWorkflowSettings(agentId).enabledAppIds,
+    customInstructions: typeof saved.customInstructions === "string"
+      ? saved.customInstructions.slice(0, 2000)
+      : "",
+    useMemory: saved.useMemory !== false,
+    requireActionApproval: saved.requireActionApproval !== false,
+  };
+}
+
+export function saveAgentWorkflowSettings(agentId: string, settings: AgentWorkflowSettings): void {
+  if (typeof window === "undefined") return;
+  const validIds = new Set(SYSTEM_APPS_CATALOG.map((app) => app.id));
+  const normalized: AgentWorkflowSettings = {
+    enabledAppIds: Array.from(new Set(settings.enabledAppIds.filter((id) => validIds.has(id)))),
+    customInstructions: settings.customInstructions.slice(0, 2000),
+    useMemory: Boolean(settings.useMemory),
+    requireActionApproval: Boolean(settings.requireActionApproval),
+  };
+  try {
+    const overrides = readWorkflowOverrides();
+    overrides[agentId.toLowerCase()] = normalized;
+    localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(overrides));
+    window.dispatchEvent(new CustomEvent("syntax_agent_workflow_updated", { detail: { agentId } }));
+    window.dispatchEvent(new CustomEvent("syntax_app_links_updated", { detail: { agentId } }));
+  } catch (e) {
+    console.error("Failed to save agent workflow", e);
+  }
+}
+
+export function resetAgentWorkflowSettings(agentId: string): AgentWorkflowSettings {
+  if (typeof window !== "undefined") {
+    try {
+      const overrides = readWorkflowOverrides();
+      delete overrides[agentId.toLowerCase()];
+      localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(overrides));
+      window.dispatchEvent(new CustomEvent("syntax_agent_workflow_updated", { detail: { agentId } }));
+      window.dispatchEvent(new CustomEvent("syntax_app_links_updated", { detail: { agentId } }));
+    } catch (e) {
+      console.error("Failed to reset agent workflow", e);
+    }
+  }
+  return defaultWorkflowSettings(agentId);
+}
 
 /**
  * Returns current map of { [appId: string]: string }
@@ -205,13 +293,11 @@ export function setAppLink(appId: string, agentId: string) {
  * Returns all apps linked to a specific agentId (or 'all').
  */
 export function getAppsLinkedToAgent(agentId: string, isAdmin = false): SystemAppDefinition[] {
-  const map = getAppToAgentLinkMap();
-  const normalizedAgent = agentId.toLowerCase();
+  const enabledAppIds = new Set(getAgentWorkflowSettings(agentId).enabledAppIds);
 
   return SYSTEM_APPS_CATALOG.filter((app) => {
     if (app.adminOnly && !isAdmin) return false;
-    const linked = map[app.id] || app.defaultAgentId;
-    return linked === normalizedAgent || linked === "all";
+    return enabledAppIds.has(app.id);
   });
 }
 
@@ -227,10 +313,24 @@ export function getAppIdsLinkedToAgent(agentId: string, isAdmin = false): string
  */
 export function getLinkedAppsContextForPrompt(agentId: string, isAdmin = false): string {
   const linked = getAppsLinkedToAgent(agentId, isAdmin);
-  if (linked.length === 0) return "";
+  const settings = getAgentWorkflowSettings(agentId);
+  if (linked.length === 0 && !settings.customInstructions.trim()) return "";
   const names = linked.map((a) => `${a.nameDe} (${a.shortName})`).join(", ");
-  return `[DIREKT VERKNÜPFTE APPS & SYSTEM-WERKZEUGE]:
-Du hast direkten Zugriff auf folgende vom Nutzer verknüpfte Werkzeuge: ${names}.
-Wenn der Nutzer nach diesen Themen fragt (z. B. Recherche, Kalender, Flug, Code, Video), biete ihm aktiv an, diese Apps direkt einzusetzen!`;
+  const parts = [
+    "[AGENTEN-WORKFLOW & VERKNÜPFTE FUNKTIONEN]",
+    linked.length
+      ? "Für diesen Agenten aktivierte Funktionen: " + names + ". Nutze sie als relevanten Kontext und sage klar, wenn eine Funktion in diesem Chat nicht tatsächlich ausgeführt werden kann."
+      : "Für diesen Agenten sind keine Funktionen aktiviert.",
+    settings.useMemory
+      ? "Nutze den freigegebenen PapayaOS-Memory-Kontext für diese Unterhaltung."
+      : "Nutze keinen gespeicherten PapayaOS-Memory-Kontext für diese Unterhaltung.",
+    settings.requireActionApproval
+      ? "Frage den Nutzer vor externen, folgenreichen oder nicht rückgängig zu machenden Aktionen um Bestätigung."
+      : "Der Nutzer hat für diesen Agenten die zusätzliche Bestätigungsaufforderung deaktiviert.",
+  ];
+  if (settings.customInstructions.trim()) {
+    parts.push("Zusätzliche Arbeitsweise dieses Agenten: " + settings.customInstructions.trim());
+  }
+  return parts.join("\n");
 }
 
