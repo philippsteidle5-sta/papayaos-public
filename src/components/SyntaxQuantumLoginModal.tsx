@@ -496,7 +496,7 @@ export const SyntaxQuantumLoginModal: React.FC<SyntaxQuantumLoginModalProps> = (
       if (isSuperAdmin) {
         setSuccessInfo({
           title: "👑 Full Core Admin <span>Granted</span>",
-          sub: "Superadmin root privileges verified (philippsteidle5@gmail.com) • All 8 Cores Active",
+          sub: "Superadmin root privileges verified • All 8 Cores Active",
           slot: "👑 #FULL-CORE-ADMIN-ROOT",
           depth: "8/8 Cores (100%)",
           email: user?.email || cleanEmail,

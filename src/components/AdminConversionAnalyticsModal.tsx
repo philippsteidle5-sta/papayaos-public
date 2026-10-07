@@ -185,8 +185,8 @@ export const AdminConversionAnalyticsModal: React.FC<AdminConversionAnalyticsMod
     return [
       {
         id: "sess_local_admin",
-        userName: currentUserEmail ? (currentUserEmail.includes("philippsteidle5") ? "Philipp Steidle (Admin)" : currentUserEmail.split("@")[0]) : "Philipp Steidle (Admin)",
-        userEmail: currentUserEmail || "philippsteidle5@gmail.com",
+        userName: currentUserEmail ? (currentUserEmail.includes("philippsteidle5") ? "PapayaOS Admin (Admin)" : currentUserEmail.split("@")[0]) : "PapayaOS Admin (Admin)",
+        userEmail: currentUserEmail || "",
         isRegisteredLead: true,
         role: "SUPERADMIN",
         plan: "ENTERPRISE_99",

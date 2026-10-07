@@ -108,7 +108,7 @@ export async function sendTelemetryPing(isPrompting = false) {
     const payload = {
       sessionId,
       userEmail: email || undefined,
-      userName: isSuperAdmin ? "Philipp Steidle (Admin)" : (email ? email.split("@")[0] : "Gast-Besucher (Du)"),
+      userName: isSuperAdmin ? "PapayaOS Admin (Admin)" : (email ? email.split("@")[0] : "Gast-Besucher (Du)"),
       currentScreen: currentActiveScreen,
       currentAgent: currentActiveAgent,
       device: window.innerWidth < 768 ? "Mobil" : "Desktop",

@@ -3019,7 +3019,7 @@ User prompt: "${finalPrompt}"`,
   // =========================================================================
   // 🛡️ USER AUTHENTICATION & REGISTRATION BACKEND (FULL CORE ADMIN SYSTEM)
   // =========================================================================
-  const SUPERADMIN_EMAIL = "philippsteidle5@gmail.com";
+  const SUPERADMIN_EMAIL = (process.env.PAPAYA_ADMIN_EMAIL || "").trim().toLowerCase();
   const AUTH_DATA_FILE = path.join(dataDirectory, "auth-users.json");
   const BETA_WAITLIST_FILE = path.join(dataDirectory, "beta-waitlist.json");
   type BetaWaitlistEntry = {
@@ -3163,7 +3163,7 @@ User prompt: "${finalPrompt}"`,
 
   function getUserBillingData(email: string, userAccount?: any) {
     const cleanEmail = email.toLowerCase();
-    const isSuper = cleanEmail === SUPERADMIN_EMAIL.toLowerCase();
+    const isSuper = Boolean(SUPERADMIN_EMAIL) && cleanEmail === SUPERADMIN_EMAIL.toLowerCase();
     const isBeta = userAccount?.role === "CLOSED_BETA_TESTER" || cleanEmail.startsWith("key_") || userAccount?.isBetaTesterKey === true;
     const now = new Date();
     const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -3198,12 +3198,12 @@ User prompt: "${finalPrompt}"`,
     return userBillingStore[cleanEmail];
   }
 
-  // ONLY PRE-INSTALLED ACCOUNT IS "philippsteidle5@gmail.com" AS FULL CORE ADMIN (SLOT #1)
-  let serverUserAccounts: ServerUserAccount[] = [
+  // Preconfigured administrator account (environment configured).
+  let serverUserAccounts: ServerUserAccount[] = SUPERADMIN_EMAIL ? [
     {
-      id: "usr_admin_philipp_steidle",
-      email: "philippsteidle5@gmail.com",
-      name: "Philipp Steidle",
+      id: "usr_admin",
+      email: SUPERADMIN_EMAIL,
+      name: "PapayaOS Administrator",
       role: "FULL_CORE_ADMIN",
       plan: "FULL_CORE_ADMIN",
       planName: "FULL CORE ADMIN (SUPERADMIN ROOT)",
@@ -3214,9 +3214,9 @@ User prompt: "${finalPrompt}"`,
       token: "",
       passwordHash: process.env.PAPAYA_ADMIN_PASSWORD ? hashPassword(process.env.PAPAYA_ADMIN_PASSWORD) : "",
       createdAt: "2026-01-01T00:00:00.000Z",
-      notes: "Full Core Admin (Vorinstallierter Superadmin Root Account - Slot #1)",
+      notes: "Full Core Admin account",
     },
-  ];
+  ] : [];
 
   const storedAccounts = readPersistentState<unknown>("auth-users", null, AUTH_DATA_FILE);
   if (Array.isArray(storedAccounts)) {
@@ -3233,11 +3233,11 @@ User prompt: "${finalPrompt}"`,
     saveAccounts();
   }
 
-  let serverLeadsDatabase: any[] = [
+  let serverLeadsDatabase: any[] = SUPERADMIN_EMAIL ? [
     {
-      id: "lead_admin_philipp_steidle",
-      name: "Philipp Steidle",
-      email: "philippsteidle5@gmail.com",
+      id: "lead_admin",
+      name: "PapayaOS Administrator",
+      email: SUPERADMIN_EMAIL,
       slot: 1,
       plan: "FULL_CORE_ADMIN",
       planName: "FULL CORE ADMIN (ROOT)",
@@ -3249,7 +3249,7 @@ User prompt: "${finalPrompt}"`,
       goal: "Full Core Admin & Sovereign Root Orchestration",
       notes: "Vorinstallierter Full Core Admin",
     },
-  ];
+  ] : [];
   const storedLeads = readPersistentState<unknown>("leads", null);
   if (Array.isArray(storedLeads)) serverLeadsDatabase = storedLeads;
   const saveLeads = () => writePersistentState("leads", serverLeadsDatabase);
@@ -3258,80 +3258,9 @@ User prompt: "${finalPrompt}"`,
   let activeKickedEmails: Record<string, { timestamp: number; reason: string }> = {};
 
   /**
-   * AUTOMATIC 24H EXPIRY & SLOT RECOVERY CLEANUP
-   * Checks every registered account. If 24h passed and NO payment method is linked:
-   * -> Account is wiped/deleted, access revoked, and the slot is freed up for waitlist!
-   */
-  function cleanExpiredUnpaidAccounts(): { cleanedCount: number; freedSlots: number[] } {
-    const now = Date.now();
-    const freedSlots: number[] = [];
-    const accountsToKeep: ServerUserAccount[] = [];
-
-    for (const acc of serverUserAccounts) {
-      const cleanEmail = acc.email.toLowerCase();
-      const isSuper = cleanEmail === SUPERADMIN_EMAIL.toLowerCase();
-      const isVipWhitelisted = cleanEmail.includes("maria") || cleanEmail.includes("steidle");
-
-      if (isSuper || isVipWhitelisted) {
-        accountsToKeep.push(acc);
-        continue;
-      }
-
-      // Check if user has linked any payment method
-      const billing = userBillingStore[cleanEmail];
-      const hasPaymentMethod = Boolean(billing && Array.isArray(billing.paymentMethods) && billing.paymentMethods.length > 0);
-
-      // Check trial expiration timestamp (24h)
-      const trialExpiresMs = acc.trialExpiresAt ? new Date(acc.trialExpiresAt).getTime() : 0;
-      const isTrialExpired = trialExpiresMs > 0 && now >= trialExpiresMs;
-
-      if (isTrialExpired && !hasPaymentMethod) {
-        // EXPIRED WITHOUT PAYMENT METHOD -> DELETE ACCOUNT & FREE UP SLOT
-        freedSlots.push(acc.slot);
-        activeKickedEmails[cleanEmail] = {
-          timestamp: now,
-          reason: `⛔ 24h-Testphase für Slot #${acc.slot} abgelaufen: Account wurde automatisch gelöscht und der Slot für die extrem hohe Nachfrage freigegeben, da keine Zahlungsmethode hinterlegt wurde.`,
-        };
-        console.log(`[AUTO 24H PURGE] Account ${cleanEmail} EXPIRED without payment method. Deleted account and freed Slot #${acc.slot}!`);
-      } else {
-        accountsToKeep.push(acc);
-      }
-    }
-
-    serverUserAccounts = accountsToKeep;
-    if (freedSlots.length) saveAccounts();
-
-    // Sync leads database: remove expired unpaid leads so lead slots are also freed
-    serverLeadsDatabase = serverLeadsDatabase.filter((l) => {
-      const low = l.email.trim().toLowerCase();
-      if (low === SUPERADMIN_EMAIL.toLowerCase() || low.includes("maria")) return true;
-      const billing = userBillingStore[low];
-      const hasPayment = Boolean(billing && Array.isArray(billing.paymentMethods) && billing.paymentMethods.length > 0);
-      const expiresMs = l.trialExpiresAt ? new Date(l.trialExpiresAt).getTime() : 0;
-      if (expiresMs > 0 && now >= expiresMs && !hasPayment) {
-        return false;
-      }
-      return true;
-    });
-    if (freedSlots.length) saveLeads();
-
-    return { cleanedCount: freedSlots.length, freedSlots };
-  }
-
-  // Periodic background cleanup every 30 seconds
-  setInterval(() => {
-    try {
-      cleanExpiredUnpaidAccounts();
-    } catch (e) {
-      console.error("[BACKGROUND CLEANUP ERROR]", e);
-    }
-  }, 30000);
-
-  /**
    * Helper to allocate the next lowest available slot number (2 to 500)
    */
   function allocateNextAvailableSlot(): number | null {
-    cleanExpiredUnpaidAccounts();
     const occupiedSlots = new Set(serverUserAccounts.map((u) => u.slot));
     for (let s = 2; s <= TOTAL_SYSTEM_SLOTS; s++) {
       if (!occupiedSlots.has(s)) {
@@ -3401,7 +3330,6 @@ User prompt: "${finalPrompt}"`,
   // GET /api/slots/status - Live Slot Scarcity & Allocation Status
   app.get("/api/slots/status", (req, res) => {
     const viewer = getSessionUser(req);
-    cleanExpiredUnpaidAccounts();
     const occupiedCount = serverUserAccounts.length;
     const freeSlots = Math.max(0, TOTAL_SYSTEM_SLOTS - occupiedCount);
 
@@ -3439,24 +3367,6 @@ User prompt: "${finalPrompt}"`,
     });
   });
 
-  // POST /api/admin/clean-expired - Admin trigger to immediately purge expired unpaid slots
-  app.post("/api/admin/clean-expired", (req, res) => {
-    if (!getSessionUser(req)?.isFullCoreAdmin) {
-      return res.status(403).json({ ok: false, error: "UNAUTHORIZED", message: "Nur der Full Core Admin darf Slots bereinigen." });
-    }
-
-    const { cleanedCount, freedSlots } = cleanExpiredUnpaidAccounts();
-    return res.json({
-      ok: true,
-      message: `${cleanedCount} unbezahlte abgelaufene Accounts gelöscht und Slots freigegeben: [${freedSlots.join(", ")}]`,
-      cleanedCount,
-      freedSlots,
-      totalOccupied: serverUserAccounts.length,
-      freeSlots: Math.max(0, TOTAL_SYSTEM_SLOTS - serverUserAccounts.length),
-      timestamp: Date.now(),
-    });
-  });
-
   // Email/password accounts use persistent storage and an opaque HttpOnly session cookie.
   const loginFailures = new Map<string, { count: number; blockedUntil: number; windowEndsAt: number }>();
   const DUMMY_PASSWORD_HASH = hashPassword(crypto.randomBytes(32).toString("hex"));
@@ -3474,7 +3384,7 @@ User prompt: "${finalPrompt}"`,
       const assignedSlot = allocateNextAvailableSlot();
       if (!assignedSlot) return res.status(403).json({ ok: false, error: "SLOTS_FULL", message: "Zurzeit sind keine Plätze verfügbar." });
       const cleanName = typeof name === "string" && name.trim() ? name.trim().slice(0, 100) : cleanEmail.split("@")[0];
-      const isAdmin = cleanEmail === SUPERADMIN_EMAIL.toLowerCase() && Boolean(process.env.PAPAYA_ADMIN_PASSWORD) && password === process.env.PAPAYA_ADMIN_PASSWORD;
+      const isAdmin = Boolean(SUPERADMIN_EMAIL) && cleanEmail === SUPERADMIN_EMAIL.toLowerCase() && Boolean(process.env.PAPAYA_ADMIN_PASSWORD) && password === process.env.PAPAYA_ADMIN_PASSWORD;
       const now = new Date().toISOString();
       const user: ServerUserAccount = {
         id: crypto.randomUUID(), email: cleanEmail, name: cleanName,
@@ -3595,7 +3505,7 @@ User prompt: "${finalPrompt}"`,
   app.post("/api/auth/update-user", (req, res) => {
     const { targetEmail, status, role, newPassword, notes } = req.body;
     if (!getSessionUser(req)?.isFullCoreAdmin) {
-      return res.status(403).json({ ok: false, error: "UNAUTHORIZED", message: "Nur der Full Core Admin (philippsteidle5@gmail.com) darf Accounts verwalten." });
+      return res.status(403).json({ ok: false, error: "UNAUTHORIZED", message: "Nur der Full Core Admin darf Accounts verwalten." });
     }
 
     const cleanTarget = (targetEmail || "").trim().toLowerCase();
@@ -3766,7 +3676,7 @@ User prompt: "${finalPrompt}"`,
       return res.status(400).json({ ok: false, error: "MISSING_EMAIL", message: "E-Mail ist erforderlich." });
     }
 
-    const isSuper = email === SUPERADMIN_EMAIL.toLowerCase();
+    const isSuper = Boolean(SUPERADMIN_EMAIL) && email === SUPERADMIN_EMAIL.toLowerCase();
     let userAccount = serverUserAccounts.find((u) => u.email.toLowerCase() === email);
 
     if (!userAccount && isSuper) {
@@ -3778,10 +3688,10 @@ User prompt: "${finalPrompt}"`,
     const fullProfile = {
       id: userAccount?.id || `usr_${email.replace(/[^a-z0-9]/g, "_")}`,
       email: email,
-      name: userAccount?.name || (isSuper ? "Philipp Steidle" : email.split("@")[0]),
+      name: userAccount?.name || (isSuper ? "PapayaOS Admin" : email.split("@")[0]),
       role: isSuper ? "FULL_CORE_ADMIN" : (userAccount?.role || "SOVEREIGN"),
       slot: userAccount?.slot || (isSuper ? 1 : 488),
-      token: userAccount?.token || (isSuper ? "" : `MZ-QUANTUM-${email.slice(0, 4).toUpperCase()}-9900`),
+      token: userAccount?.token || "",
       status: userAccount?.status || (billing.paymentMethods.length > 0 ? "GRANTED" : "TRIAL_ACTIVE"),
       isFullCoreAdmin: isSuper,
       createdAt: userAccount?.createdAt || new Date().toISOString(),
@@ -3852,9 +3762,9 @@ User prompt: "${finalPrompt}"`,
       name: userAccount?.name || cleanEmail.split("@")[0],
       role: userAccount?.role || "SOVEREIGN",
       slot: userAccount?.slot || 488,
-      token: userAccount?.token || "MZ-QUANTUM-TOKEN",
+      token: userAccount?.token || "",
       status: userAccount?.status || "GRANTED",
-      isFullCoreAdmin: cleanEmail === SUPERADMIN_EMAIL.toLowerCase(),
+      isFullCoreAdmin: Boolean(SUPERADMIN_EMAIL) && cleanEmail === SUPERADMIN_EMAIL.toLowerCase(),
       createdAt: userAccount?.createdAt || new Date().toISOString(),
       subscription: billing.subscription,
       paymentMethods: billing.paymentMethods,
@@ -3863,7 +3773,7 @@ User prompt: "${finalPrompt}"`,
         coresActive: 8,
         totalCores: 8,
         tokensUsed: 0,
-        tokensLimit: cleanEmail === SUPERADMIN_EMAIL.toLowerCase() ? 10000000 : 50000,
+        tokensLimit: Boolean(SUPERADMIN_EMAIL) && cleanEmail === SUPERADMIN_EMAIL.toLowerCase() ? 10000000 : 50000,
         queriesToday: 0,
         queriesLimit: 1000,
         uptimePercent: 99.98,
@@ -4264,12 +4174,12 @@ User prompt: "${finalPrompt}"`,
       return res.json({ hasAccess: false, status: "UNREGISTERED", reason: "Keine E-Mail angegeben." });
     }
 
-    if (email === SUPERADMIN_EMAIL.toLowerCase()) {
+    if (Boolean(SUPERADMIN_EMAIL) && email === SUPERADMIN_EMAIL.toLowerCase()) {
       return res.json({
         hasAccess: true,
         status: "GRANTED",
         isAdmin: true,
-        reason: "Full Core Admin Root Privileges (philippsteidle5@gmail.com)",
+        reason: "Full Core Admin Root Privileges",
       });
     }
 
@@ -4350,32 +4260,7 @@ User prompt: "${finalPrompt}"`,
   // =========================================================================
   // 🔑 ACCESS KEYS (1-TAG CODES) SERVER-SIDE MANAGEMENT & SYNC API
   // =========================================================================
-  let serverAccessKeysDatabase: any[] = [
-    {
-      id: "key_otto",
-      key: "otto",
-      label: "Otto VIP 1-Tag Vollzugriff",
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      durationHours: 24,
-      createdBy: "philippsteidle5@gmail.com",
-      usedCount: 0,
-      isActive: true,
-      notes: "1-Tag Test-Key für Otto mit Zugriff auf alle 8 Cores",
-    },
-    {
-      id: "key_vip2026",
-      key: "VIP2026",
-      label: "VIP 2026 Sovereign Pass",
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      durationHours: 24,
-      createdBy: "philippsteidle5@gmail.com",
-      usedCount: 0,
-      isActive: true,
-      notes: "Offizieller 24h VIP-Key für alle 8 Cores",
-    },
-  ];
+  let serverAccessKeysDatabase: any[] = [];
   const storedAccessKeys = readPersistentState<unknown>("access-keys", null);
   if (Array.isArray(storedAccessKeys)) serverAccessKeysDatabase = storedAccessKeys;
   const saveAccessKeys = () => writePersistentState("access-keys", serverAccessKeysDatabase);
@@ -4406,7 +4291,7 @@ User prompt: "${finalPrompt}"`,
       label,
       durationHours = 24,
       notes,
-      createdBy = "philippsteidle5@gmail.com",
+      createdBy = SUPERADMIN_EMAIL,
       role = "SOVEREIGN",
       isBetaTesterKey,
     } = req.body;
@@ -4473,27 +4358,8 @@ User prompt: "${finalPrompt}"`,
       return kClean === cleanKey || kStripped === strippedKey;
     });
 
-    if (!found && strippedKey.length === 16 && /^\d+$/.test(strippedKey)) {
-      const formatted = `${strippedKey.slice(0, 4)}-${strippedKey.slice(4, 8)}-${strippedKey.slice(8, 12)}-${strippedKey.slice(12, 16)}`;
-      found = {
-        id: `key_beta_${strippedKey}_${Date.now()}`,
-        key: formatted,
-        label: `Closed Beta Tester (#${strippedKey.slice(0, 4)})`,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 720 * 60 * 60 * 1000).toISOString(),
-        durationHours: 720,
-        usedCount: 0,
-        isActive: true,
-        role: "CLOSED_BETA_TESTER",
-        isBetaTesterKey: true,
-        notes: "Auto-registered Closed Beta Tester Key",
-      };
-      serverAccessKeysDatabase.unshift(found);
-      saveAccessKeys();
-    }
-
     if (!found) {
-      return res.json({ valid: false, message: `Key '${cleanKey}' nicht gefunden.` });
+      return res.json({ valid: false, message: "Dieser Key wurde nicht gefunden. Bitte prüfe deine Eingabe oder fordere einen gültigen Beta-Key an." });
     }
 
     if (!found.isActive) {
@@ -4872,7 +4738,7 @@ User prompt: "${finalPrompt}"`,
 
     const role = isSuperAdmin ? "SUPERADMIN" : isLead ? (leadRecord?.plan === "ENTERPRISE_99" ? "ENTERPRISE" : "PRO_USER") : "VISITOR";
     const plan = isSuperAdmin ? "ENTERPRISE_99" : (leadRecord?.plan || "TRIAL_FREE");
-    const name = userName || (isSuperAdmin ? "Philipp Steidle (Admin)" : (leadRecord?.name || (email ? email.split("@")[0] : "Besucher")));
+    const name = userName || (isSuperAdmin ? "PapayaOS Admin (Admin)" : (leadRecord?.name || (email ? email.split("@")[0] : "Besucher")));
 
     const sessionStartTime = existing ? existing.sessionStartTime : new Date(now).toISOString();
     const durationSeconds = Math.round((now - new Date(sessionStartTime).getTime()) / 1000);
@@ -4966,6 +4832,13 @@ User prompt: "${finalPrompt}"`,
       error: err.name || "SERVER_ERROR",
       message: err.message || "Ein interner Serverfehler ist aufgetreten."
     });
+  });
+
+  // Public entry: the domain root is the SalePage; the workspace stays at /?app=true.
+  const salesPagePath = path.join(process.cwd(), "public", "sales-preview.html");
+  app.get("/", (req, res, next) => {
+    if (req.query.app === "true") return next();
+    return res.sendFile(salesPagePath);
   });
 
   // Vite integration

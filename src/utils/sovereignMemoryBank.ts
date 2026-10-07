@@ -208,7 +208,7 @@ const DOMAIN_PROFILES: CoreDomainProfile[] = [
           "Content-Security-Policy und Eingabe-Sanitizer nominal. Keine Anomalien in aktiven Sessions."
         ],
         responses: [
-          "🛡️ O.D.I.N. DEFENSE STATUS: 100% SICHER.\n\n- Zero-Trust Architektur verifiziert jeden Request\n- RBAC-Rechte für philippsteidle5@gmail.com validiert (SUPERADMIN)\n- Keine unberechtigten Zugriffsversuche auf Admin-Funktionen",
+          "🛡️ O.D.I.N. DEFENSE STATUS: 100% SICHER.\n\n- Zero-Trust Architektur verifiziert jeden Request\n- RBAC-Rechte für configured administrator validiert (SUPERADMIN)\n- Keine unberechtigten Zugriffsversuche auf Admin-Funktionen",
           "🔐 RBAC AUDIT BESTANDEN:\nKritische Modale (Conversion-Analytics, Rechnungen, Leads) sind vor unberechtigten Nutzern hermetisch abgeriegelt.",
           "🚫 INTRUSION DEFENSE:\nAutomatische Drosselung bei auffälligen Request-Frequenzen aktiv. Keine verdächtigen IPs registriert.",
           "🔑 KEY-SCHUTZ VERIFIZIERT:\n100% der API-Secrets verbleiben serverseitig in der gesicherten Laufzeit-Umgebung.",
@@ -582,7 +582,7 @@ export function generate2514SovereignMemories(userEmail?: string): QueryLogEntry
         isStarred,
         isReal: false,
         tags: [...topic.tags, profile.agentId],
-        userEmail: userEmail || "philippsteidle5@gmail.com",
+        userEmail: userEmail || "configured administrator",
       });
 
       globalSeq++;

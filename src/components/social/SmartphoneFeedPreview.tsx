@@ -45,7 +45,7 @@ export const SmartphoneFeedPreview: React.FC<SmartphoneFeedPreviewProps> = ({
   hashtags,
   soundTrack = "Original Sound - S.Y.N.T.A.X. AI",
   creatorHandle = "@philippsteidle",
-  displayName = "Philipp Steidle",
+  displayName = "PapayaOS Admin",
   avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
   aspectRatio = "9:16",
   likesCount = 4280,
