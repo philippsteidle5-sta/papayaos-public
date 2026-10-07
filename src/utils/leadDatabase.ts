@@ -520,34 +520,10 @@ export function validateAndRedeemAccessKey(rawKey: string, options: { syncWithSe
     return kClean === cleanKey.toLowerCase() || kStripped === strippedKey;
   });
 
-  // If not found in primary list, check if it's a 16-digit numeric Beta key or in secondary storage
-  if (!found && strippedKey.length === 16 && /^\d+$/.test(strippedKey)) {
-    // Format nicely XXXX-XXXX-XXXX-XXXX
-    const formatted = `${strippedKey.slice(0, 4)}-${strippedKey.slice(4, 8)}-${strippedKey.slice(8, 12)}-${strippedKey.slice(12, 16)}`;
-    const now = new Date();
-    const newBetaKey: AccessKeyRecord = {
-      id: `key_beta_${strippedKey}_${Date.now()}`,
-      key: formatted,
-      label: `Closed Beta Tester (#${strippedKey.slice(0, 4)})`,
-      createdAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + 720 * 60 * 60 * 1000).toISOString(),
-      durationHours: 720,
-      createdBy: SUPERADMIN_EMAIL,
-      usedCount: 0,
-      isActive: true,
-      role: "CLOSED_BETA_TESTER",
-      isBetaTesterKey: true,
-      notes: "Auto-registered Closed Beta Tester Key (16-Digit Full 8-Core Access)",
-    };
-    keys.unshift(newBetaKey);
-    saveAccessKeysDatabase(keys, options.syncWithServer !== false);
-    found = newBetaKey;
-  }
-
   if (!found) {
     return {
       success: false,
-      message: `Ungültiger Key '${cleanKey}'. Bitte überprüfe die 16 Zahlen oder fordere beim Admin einen neuen Key an.`,
+      message: "Dieser Key wurde nicht gefunden. Bitte prüfe deine Eingabe oder fordere einen gültigen Beta-Key an.",
     };
   }
 

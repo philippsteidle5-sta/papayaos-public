@@ -4383,27 +4383,8 @@ User prompt: "${finalPrompt}"`,
       return kClean === cleanKey || kStripped === strippedKey;
     });
 
-    if (!found && strippedKey.length === 16 && /^\d+$/.test(strippedKey)) {
-      const formatted = `${strippedKey.slice(0, 4)}-${strippedKey.slice(4, 8)}-${strippedKey.slice(8, 12)}-${strippedKey.slice(12, 16)}`;
-      found = {
-        id: `key_beta_${strippedKey}_${Date.now()}`,
-        key: formatted,
-        label: `Closed Beta Tester (#${strippedKey.slice(0, 4)})`,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 720 * 60 * 60 * 1000).toISOString(),
-        durationHours: 720,
-        usedCount: 0,
-        isActive: true,
-        role: "CLOSED_BETA_TESTER",
-        isBetaTesterKey: true,
-        notes: "Auto-registered Closed Beta Tester Key",
-      };
-      serverAccessKeysDatabase.unshift(found);
-      saveAccessKeys();
-    }
-
     if (!found) {
-      return res.json({ valid: false, message: `Key '${cleanKey}' nicht gefunden.` });
+      return res.json({ valid: false, message: "Dieser Key wurde nicht gefunden. Bitte prüfe deine Eingabe oder fordere einen gültigen Beta-Key an." });
     }
 
     if (!found.isActive) {

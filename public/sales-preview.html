@@ -430,6 +430,14 @@ main>.sale-section,main>.orbit-section,main>.pillars-section,main>.pricing-secti
 @media(max-width:640px){.sales-header{grid-template-columns:minmax(0,1fr) auto;gap:6px;padding-inline:10px!important}.sales-header>div{gap:5px}.sales-header .join,.sales-header .signin{min-height:36px!important;padding-inline:9px!important;font-size:9px!important}}
 </style>
 </head><body class="font-sans">
+<style>
+  #papayaAccessDialog { position:fixed; inset:0; margin:auto; width:min(1000px,calc(100vw - 28px)); height:min(860px,calc(100svh - 28px)); max-width:none; max-height:none; padding:0; border:1px solid #ffffff24; border-radius:22px; overflow:hidden; background:#050000; color:#fff6ee; box-shadow:0 24px 100px #000b; }
+  #papayaAccessDialog::backdrop { background:#050303c9; backdrop-filter:blur(10px); }
+  #papayaAccessDialog iframe { display:block; width:100%; height:100%; border:0; background:#050000; }
+  @media(max-width:640px) { .sales-header .signin { display:inline-flex; min-height:36px; padding-inline:11px !important; font-size:10px !important; } }
+  @media(max-width:640px) { #papayaAccessDialog { width:100vw; height:100svh; border-radius:0; } }
+</style>
+<dialog id="papayaAccessDialog" aria-label="Bei PapayaOS anmelden"><iframe id="papayaAccessFrame" title="PapayaOS Login und Registrierung" src="about:blank"></iframe></dialog>
 <main class="min-h-screen bg-canvas p-0">
       <section class="sales-hero relative min-h-[100svh] w-full select-none overflow-hidden bg-background [&_input]:select-text"><canvas class="page-particles" aria-hidden="true"></canvas>
         <img
@@ -859,17 +867,17 @@ function upd(){
   bar.style.pointerEvents=show?'auto':'none';link.tabIndex=show?0:-1;
 }
 addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd();
-document.querySelectorAll('[data-papaya-login]').forEach(a=>a.addEventListener('click',e=>{
-  e.preventDefault();
-  if(window.parent!==window){
-    parent.postMessage({type:'papayaos:open-login'},location.origin);
-    return;
-  }
-  const target=location.protocol==='file:'?new URL('http://localhost:3000/'):new URL('/',location.href);
-  target.searchParams.set('app','true');
-  target.searchParams.set('login','true');
-  location.assign(target.href);
-}));
+const accessDialog=document.getElementById('papayaAccessDialog'),accessFrame=document.getElementById('papayaAccessFrame');
+const accessBase=location.protocol==='file:'?new URL('http://localhost:3000/'):new URL('/',location.href),accessOrigin=accessBase.origin;
+function openSalesLogin(){if(!accessDialog||!accessFrame)return;accessFrame.src=new URL('login.html',accessBase).href;accessDialog.showModal();}
+function closeSalesLogin(){if(accessDialog?.open)accessDialog.close();}
+document.querySelectorAll('[data-papaya-login]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();openSalesLogin();}));
+accessDialog?.addEventListener('click',e=>{if(e.target===accessDialog)closeSalesLogin();});
+addEventListener('message',event=>{
+  if(event.origin!==accessOrigin||event.source!==accessFrame?.contentWindow)return;
+  if(event.data?.type==='papayaos:close-login')closeSalesLogin();
+  if(event.data?.type==='papayaos:auth-success'){closeSalesLogin();location.assign(new URL('?app=true',accessBase).href);}
+});
 document.querySelectorAll('a[href="#waitlist2"]').forEach(a=>a.addEventListener('click',()=>{
   setTimeout(()=>{const i=document.getElementById('em2');if(i)i.focus({preventScroll:true})},700);
 }));
