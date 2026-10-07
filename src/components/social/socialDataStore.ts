@@ -160,7 +160,7 @@ export const INITIAL_ACCOUNTS: Record<SocialPlatform, SocialAccountProfile> = {
   tiktok: {
     platform: "tiktok",
     handle: "@philippsteidle",
-    displayName: "Philipp Steidle | S.Y.N.T.A.X.",
+    displayName: "PapayaOS Admin | S.Y.N.T.A.X.",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
     followers: 124800,
     postsCount: 68,
@@ -171,7 +171,7 @@ export const INITIAL_ACCOUNTS: Record<SocialPlatform, SocialAccountProfile> = {
   instagram: {
     platform: "instagram",
     handle: "@philippsteidle",
-    displayName: "Philipp Steidle ⚡ AI Architect",
+    displayName: "PapayaOS Admin ⚡ AI Architect",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
     followers: 46200,
     postsCount: 142,
@@ -191,7 +191,7 @@ export const INITIAL_ACCOUNTS: Record<SocialPlatform, SocialAccountProfile> = {
   x: {
     platform: "x",
     handle: "@philipp_steidle",
-    displayName: "Philipp Steidle ⚡",
+    displayName: "PapayaOS Admin ⚡",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
     followers: 18400,
     postsCount: 890,
@@ -202,7 +202,7 @@ export const INITIAL_ACCOUNTS: Record<SocialPlatform, SocialAccountProfile> = {
   linkedin: {
     platform: "linkedin",
     handle: "in/philipp-steidle",
-    displayName: "Philipp Steidle (Founder & AI Systems)",
+    displayName: "PapayaOS Admin (Founder & AI Systems)",
     avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
     followers: 9540,
     postsCount: 52,

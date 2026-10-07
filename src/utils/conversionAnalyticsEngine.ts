@@ -131,8 +131,8 @@ export type AnalyticsTimeframe = "TODAY" | "24H" | "7D" | "30D" | "ALL";
 export const SIMULATION_LIVE_SESSIONS: LiveSessionRecord[] = [
   {
     id: "sess_de_01",
-    userName: "Philipp Steidle (Admin)",
-    userEmail: "philippsteidle5@gmail.com",
+    userName: "PapayaOS Admin (Admin)",
+    userEmail: "",
     isRegisteredLead: true,
     role: "SUPERADMIN",
     plan: "ENTERPRISE_99",

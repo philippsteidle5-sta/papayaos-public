@@ -801,7 +801,7 @@ export default function App() {
             setKickedSessionModal({
               isOpen: true,
               email: activeEmail,
-              reason: accessCheck.reason || "Dieser Account wurde vom Administrator (philippsteidle5@gmail.com) gesperrt.",
+              reason: accessCheck.reason || "Dieser Account wurde vom Administrator gesperrt.",
             });
             try {
               localStorage.removeItem("maze_registered_vip_user");
@@ -822,7 +822,7 @@ export default function App() {
                 setKickedSessionModal({
                   isOpen: true,
                   email: activeEmail,
-                  reason: serverData.reason || "Dieser Account wurde vom Administrator (philippsteidle5@gmail.com) gesperrt.",
+                  reason: serverData.reason || "Dieser Account wurde vom Administrator gesperrt.",
                 });
                 try {
                   localStorage.removeItem("maze_registered_vip_user");

@@ -72,10 +72,10 @@ export function generateInvoiceHtml(inv: InvoiceItemData, profileInfo?: {
 }): string {
   const { net, tax, gross } = computeInvoiceBreakdown(inv.amount, inv.netAmount, inv.taxAmount);
   const invoiceNum = formatInvoiceNumber(inv.number);
-  const recipientName = inv.recipientName || profileInfo?.name || "Philipp Steidle";
-  const recipientEmail = inv.recipientEmail || profileInfo?.email || "philippsteidle5@gmail.com";
+  const recipientName = inv.recipientName || profileInfo?.name || "PapayaOS Admin";
+  const recipientEmail = inv.recipientEmail || profileInfo?.email || "";
   const recipientSlot = inv.recipientSlot !== undefined ? inv.recipientSlot : (profileInfo?.slot !== undefined ? profileInfo.slot : 1);
-  const quantumToken = inv.quantumToken || profileInfo?.token || "PUBLIC-DEMO-NO-AUTH";
+  const quantumToken = inv.quantumToken || profileInfo?.token || "";
   const features = inv.features || getInvoiceFeatures(inv.planName);
 
   // Normalize Plan display

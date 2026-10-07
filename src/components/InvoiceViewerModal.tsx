@@ -49,10 +49,10 @@ export const InvoiceViewerModal: React.FC<InvoiceViewerModalProps> = ({
   const isEn = lang === "en";
   const { net, tax, gross } = computeInvoiceBreakdown(invoice.amount, invoice.netAmount, invoice.taxAmount);
   const invoiceNum = formatInvoiceNumber(invoice.number);
-  const recipientName = invoice.recipientName || profileInfo?.name || "Philipp Steidle";
-  const recipientEmail = invoice.recipientEmail || profileInfo?.email || "philippsteidle5@gmail.com";
+  const recipientName = invoice.recipientName || profileInfo?.name || "PapayaOS Admin";
+  const recipientEmail = invoice.recipientEmail || profileInfo?.email || "";
   const recipientSlot = invoice.recipientSlot !== undefined ? invoice.recipientSlot : (profileInfo?.slot !== undefined ? profileInfo.slot : 1);
-  const quantumToken = invoice.quantumToken || profileInfo?.token || "PUBLIC-DEMO-NO-AUTH";
+  const quantumToken = invoice.quantumToken || profileInfo?.token || "";
   const features = invoice.features || getInvoiceFeatures(invoice.planName);
 
   let cleanPlanTitle = invoice.planName;

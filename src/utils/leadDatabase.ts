@@ -1,10 +1,10 @@
 // S.Y.N.T.A.X. Sovereign OS - Central Lead & User Access Database (getsyntax.ai)
-// Strict Administrator Email: philippsteidle5@gmail.com
+// Administrator email is configured through the deployment environment.
 import { UserRole } from "../rbac";
 
-export const SUPERADMIN_EMAIL = "philippsteidle5@gmail.com";
+export const SUPERADMIN_EMAIL = (import.meta.env.VITE_PAPAYA_ADMIN_EMAIL || "").trim().toLowerCase();
 
-// MASTER ADMIN SECRET ACCESS KEY (Short, crisp and easy to enter)
+// Administrator access is configured with environment variables.
 
 export const AUTH_BROADCAST_CHANNEL_NAME = "syntax_quantum_auth_broadcast_v1";
 
@@ -17,7 +17,7 @@ export interface AccessKeyRecord {
   createdAt: string; // ISO
   expiresAt: string; // ISO (24h default)
   durationHours: number; // default 24
-  createdBy: string; // philippsteidle5@gmail.com
+  createdBy: string; // configured administrator
   usedCount: number;
   isActive: boolean;
   notes?: string;
@@ -199,68 +199,7 @@ export function setStoredAdminAuthenticated(auth: boolean): void {
 // 🔑 CENTRAL 1-DAY ACCESS KEYS DATABASE
 // ==========================================
 
-export const INITIAL_SEEDED_ACCESS_KEYS: AccessKeyRecord[] = [
-  {
-    id: "key_maria",
-    key: "maria",
-    label: "Maria Steidle VIP 24h Vollzugriff",
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    durationHours: 8760,
-    createdBy: SUPERADMIN_EMAIL,
-    usedCount: 0,
-    isActive: true,
-    notes: "VIP Dauerzugang für Maria Steidle zu allen 8 Cores",
-  },
-  {
-    id: "key_mariasteidle",
-    key: "mariasteidle",
-    label: "Maria Steidle VIP Pass",
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    durationHours: 8760,
-    createdBy: SUPERADMIN_EMAIL,
-    usedCount: 0,
-    isActive: true,
-    notes: "VIP Dauerzugang für Maria Steidle",
-  },
-  {
-    id: "key_otto",
-    key: "otto",
-    label: "Otto VIP 1-Tag Vollzugriff",
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    durationHours: 24,
-    createdBy: SUPERADMIN_EMAIL,
-    usedCount: 0,
-    isActive: true,
-    notes: "1-Tag Test-Key für Otto mit Zugriff auf alle 8 Cores",
-  },
-  {
-    id: "key_vip2026",
-    key: "VIP2026",
-    label: "VIP 2026 Sovereign Pass",
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    durationHours: 24,
-    createdBy: SUPERADMIN_EMAIL,
-    usedCount: 0,
-    isActive: true,
-    notes: "Offizieller 24h VIP-Key für alle 8 Cores",
-  },
-  {
-    id: "key_matrix_test",
-    key: "MATRIX-24H",
-    label: "Matrix 24h Full Fleet Access",
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    durationHours: 24,
-    createdBy: SUPERADMIN_EMAIL,
-    usedCount: 0,
-    isActive: true,
-    notes: "Testkey für 8 Cores",
-  },
-];
+export const INITIAL_SEEDED_ACCESS_KEYS: AccessKeyRecord[] = [];
 
 /**
  * Returns all stored access keys from database
@@ -270,38 +209,13 @@ export function getAccessKeysDatabase(syncWithServer = true): AccessKeyRecord[] 
     const raw = localStorage.getItem(ACCESS_KEYS_STORAGE_KEY);
     if (raw) {
       const parsed: AccessKeyRecord[] = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure 'otto', 'maria', 'mariasteidle' keys are always present and active
-        const requiredKeys = ["otto", "maria", "mariasteidle"];
-        let needsSave = false;
-
-        requiredKeys.forEach((reqKey) => {
-          const found = parsed.find((k) => k.key.trim().toLowerCase() === reqKey);
-          if (!found) {
-            const seed = INITIAL_SEEDED_ACCESS_KEYS.find((k) => k.key.trim().toLowerCase() === reqKey);
-            if (seed) {
-              parsed.unshift(seed);
-              needsSave = true;
-            }
-          } else if (new Date(found.expiresAt).getTime() < Date.now()) {
-            // Auto renew
-            found.expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-            found.isActive = true;
-            needsSave = true;
-          }
-        });
-
-        if (needsSave) {
-          saveAccessKeysDatabase(parsed, syncWithServer);
-        }
-        return parsed;
-      }
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.error("Failed to load access keys database", e);
   }
 
-  saveAccessKeysDatabase(INITIAL_SEEDED_ACCESS_KEYS, syncWithServer);
+  if (INITIAL_SEEDED_ACCESS_KEYS.length > 0) saveAccessKeysDatabase(INITIAL_SEEDED_ACCESS_KEYS, syncWithServer);
   return INITIAL_SEEDED_ACCESS_KEYS;
 }
 
@@ -816,12 +730,12 @@ export function autoRedeemKeyFromUrlQuery(): {
   return { redeemed: false };
 }
 
-// Initial seed database with early signups - The ONLY pre-installed account is FULL CORE ADMIN philippsteidle5@gmail.com
-const INITIAL_SEEDED_LEADS: LeadRecord[] = [
+// Initial seed record for the environment-configured administrator.
+const INITIAL_SEEDED_LEADS: LeadRecord[] = SUPERADMIN_EMAIL ? [
   {
-    id: "lead_admin_philipp_steidle",
-    name: "Philipp Steidle",
-    email: "philippsteidle5@gmail.com",
+    id: "lead_admin",
+    name: "PapayaOS Administrator",
+    email: SUPERADMIN_EMAIL,
     slot: 1,
     plan: "ENTERPRISE_99",
     planName: "FULL CORE ADMIN (SUPERADMIN ROOT)",
@@ -833,13 +747,13 @@ const INITIAL_SEEDED_LEADS: LeadRecord[] = [
     status: "GRANTED",
     grantedAt: new Date().toISOString(),
     grantedBy: SUPERADMIN_EMAIL,
-    token: "PUBLIC-DEMO-NO-AUTH",
+    token: "",
     goal: "Full Core Admin & Sovereign Root Orchestration (Alle 8 KI-Cores)",
     notes: "Vorinstallierter Full Core Admin Account - Voller Root Zugriff",
     source: "Master Admin Root Installation",
     device: "Desktop",
   },
-];
+] : [];
 
 /**
  * Returns all stored leads from the database
@@ -850,13 +764,15 @@ export function getLeadsDatabase(): LeadRecord[] {
     if (raw) {
       const parsed: LeadRecord[] = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure Philipp Steidle admin is present in existing cached databases
+        // Ensure the configured administrator is present in existing cached databases
         const adminFound = parsed.find(
           (l) => l.email.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
         );
         if (!adminFound) {
-          parsed.unshift(INITIAL_SEEDED_LEADS[0]);
-          saveLeadsDatabase(parsed);
+          if (INITIAL_SEEDED_LEADS.length > 0) {
+            parsed.unshift(INITIAL_SEEDED_LEADS[0]);
+            saveLeadsDatabase(parsed);
+          }
         } else if (adminFound.status !== "GRANTED") {
           adminFound.status = "GRANTED";
           adminFound.grantedBy = SUPERADMIN_EMAIL;
@@ -979,7 +895,7 @@ export function kickAccountImmediately(email: string, reason: string = "Account 
  */
 export function isSuperAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  return email.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+  return Boolean(SUPERADMIN_EMAIL) && email.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
 }
 
 /**
@@ -1052,17 +968,7 @@ export function checkEmailAccessStatus(email: string): {
       hasAccess: true,
       isAdmin: true,
       status: "GRANTED",
-      reason: "Superadmin Root Privileges (philippsteidle5@gmail.com)",
-    };
-  }
-
-  // Maria Steidle VIP Whitelist: Instant full access
-  if (cleanEmail.includes("maria") || cleanEmail.includes("steidle")) {
-    return {
-      hasAccess: true,
-      isAdmin: false,
-      status: "GRANTED",
-      reason: "VIP Dauerzugang für Maria Steidle freigeschaltet",
+      reason: "Superadmin Root Privileges",
     };
   }
 
@@ -1076,7 +982,6 @@ export function checkEmailAccessStatus(email: string): {
       const lName = l.name.trim().toLowerCase();
       return (
         lEmail === cleanEmail ||
-        (cleanEmail.includes("maria") && cleanEmail.includes("steidle") && lEmail.includes("maria")) ||
         lName === cleanEmail
       );
     });
@@ -1256,7 +1161,7 @@ export function unbanLeadAndRestoreAccess(
   adminEmail: string = SUPERADMIN_EMAIL
 ): boolean {
   if (!isSuperAdminEmail(adminEmail)) {
-    console.error("Unauthorized: Only philippsteidle5@gmail.com can unban users!");
+    console.error("Unauthorized: Only the configured administrator can unban users!");
     return false;
   }
 
@@ -1340,7 +1245,7 @@ export function grantTrialAccessToLead(email: string, adminEmail: string = SUPER
  */
 export function approveAllPendingLeads(adminEmail: string = SUPERADMIN_EMAIL): number {
   if (!isSuperAdminEmail(adminEmail)) {
-    console.error("Unauthorized: Only philippsteidle5@gmail.com can approve leads!");
+    console.error("Unauthorized: Only the configured administrator can approve leads!");
     return 0;
   }
 
@@ -1438,7 +1343,7 @@ export interface CustomLeadUpdate {
 
 export function updateCustomLeadAccess(update: CustomLeadUpdate, adminEmail: string = SUPERADMIN_EMAIL): boolean {
   if (!isSuperAdminEmail(adminEmail)) {
-    console.error("Unauthorized: Only philippsteidle5@gmail.com can modify custom access!");
+    console.error("Unauthorized: Only the configured administrator can modify custom access!");
     return false;
   }
 
@@ -1924,10 +1829,10 @@ export async function fetchUserTerminalProfile(userEmail?: string): Promise<Full
   const fallbackProfile: FullUserProfileData = {
     id: registeredLead?.id || `usr_${email.replace(/[^a-z0-9]/g, "_")}`,
     email: email,
-    name: registeredLead?.name || (isSuper ? "Philipp Steidle" : (isBetaRole ? "Closed Beta Tester" : email.split("@")[0])),
+    name: registeredLead?.name || (isSuper ? "PapayaOS Admin" : (isBetaRole ? "Closed Beta Tester" : email.split("@")[0])),
     role: isSuper ? "FULL_CORE_ADMIN" : (isBetaRole ? "CLOSED_BETA_TESTER" : "SOVEREIGN"),
     slot: registeredLead?.slot || (isSuper ? 1 : 488),
-    token: registeredLead?.token || (isSuper ? "PUBLIC-DEMO-NO-AUTH" : `MZ-QUANTUM-${email.slice(0, 4).toUpperCase()}-9900`),
+    token: registeredLead?.token || "",
     status: (isSuper || isBetaRole) ? "GRANTED" : (registeredLead?.status || "TRIAL_ACTIVE"),
     isFullCoreAdmin: isSuper,
     createdAt: registeredLead?.registeredAt || now.toISOString(),

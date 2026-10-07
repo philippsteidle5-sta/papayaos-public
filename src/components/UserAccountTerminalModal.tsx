@@ -776,7 +776,7 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
                       <div className={`text-xs font-mono font-bold tracking-wider truncate mt-0.5 max-w-[400px] ${
                         isModern ? "text-red-300" : "text-cyan-300"
                       }`}>
-                        {profile?.token || "MZ-QUANTUM-2026-ROOT"}
+                        {profile?.token || "—"}
                       </div>
                     </div>
                     <button

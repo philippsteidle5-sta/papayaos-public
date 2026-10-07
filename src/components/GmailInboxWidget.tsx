@@ -230,8 +230,8 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
     id: "demo-101",
     senderName: "Shopify Merchant Ops",
     senderEmail: "orders@shopify-notifications.com",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "⚡ New Order #4892 - $1,420.00 USD received",
     snippet: "Customer Alex Mercer ordered 2x Quantum Neural Core V2. Payment verified via PayPal.",
     body: `Hello Philipp,\n\nA new order (#4892) has just been registered via your Shopify Store.\n\nOrder Details:\n- 2x Quantum Neural Core V2 ($710.00 / ea)\n- Total Amount: $1,420.00 USD\n- Payment Status: Paid via PayPal\n\nThe S.Y.N.T.A.X. Trading Bot has logged the transaction in real time.\n\nBest regards,\nShopify Merchant Ops Engine`,
@@ -251,11 +251,11 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
     id: "demo-102",
     senderName: "PayPal Business Service",
     senderEmail: "service@paypal-business.com",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "Deposit Notification: +$2,850.00 credited to account",
     snippet: "Transfer from S.Y.N.T.A.X. Neural Trading Sub-Account. New balance: $18,450.00.",
-    body: `Dear Mr. Steidle,\n\nWe confirm receipt of a credit to your PayPal Business account.\n\nAmount: +$2,850.00 USD\nPurpose: Daily Arbitrage Profits\nTo Recipient: philippsteidle5@gmail.com\n\nYour new available balance is $18,450.00 USD.\n\nBest regards,\nYour PayPal Business Team`,
+    body: `Dear Mr. Steidle,\n\nWe confirm receipt of a credit to your PayPal Business account.\n\nAmount: +$2,850.00 USD\nPurpose: Daily Arbitrage Profits\nTo Recipient: admin@papayaos.local\n\nYour new available balance is $18,450.00 USD.\n\nBest regards,\nYour PayPal Business Team`,
     timestamp: "1:10 PM",
     fullDate: "Wed, Aug 12, 2026, 1:10:00 PM",
     relativeTime: "2 hours ago",
@@ -272,11 +272,11 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
     id: "demo-103",
     senderName: "GitHub Security Agent",
     senderEmail: "no-reply@github.com",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "Claude Code Commit: Build #808 compiled successfully",
     snippet: "Agent VECTOR refactored 48 lines in ParticleSphere.tsx. 0 Errors.",
-    body: `Repository: syntax-core-org/quantum-applet\nBranch: main\nRecipient: philippsteidle5@gmail.com\n\nCommit Details:\n- Author: Agent VECTOR via Claude Code CLI\n- Message: Add live quantum fibonacci lattice shader optimization\n- Status: All tests green`,
+    body: `Repository: syntax-core-org/quantum-applet\nBranch: main\nRecipient: admin@papayaos.local\n\nCommit Details:\n- Author: Agent VECTOR via Claude Code CLI\n- Message: Add live quantum fibonacci lattice shader optimization\n- Status: All tests green`,
     timestamp: "Yesterday 6:30 PM",
     fullDate: "Tue, Aug 11, 2026, 6:30:00 PM",
     relativeTime: "Yesterday",
@@ -294,8 +294,8 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
     id: "spam-201",
     senderName: "Security Center Alert",
     senderEmail: "security-alert@account-verify-auth99.net",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "🚨 URGENT: Your Banking & Google Account has been temporarily locked",
     snippet: "Unauthorized access detected from Moscow. Please verify your password within 2 hours...",
     body: `CRITICAL SECURITY ALERT!\n\nDear Customer,\n\nWe detected suspicious login attempts on your account (IP: 185.220.101.4 - Moscow, RU).\n\nFor security reasons, all account transactions have been temporarily halted.\n\nClick the link below to verify your identity and password immediately:\n👉 http://phishing-fake-login.verify-auth99.net/confirm-identity\n\nIf you do not complete this verification within 2 hours, your account will be permanently terminated.\n\nCustomer Security Team`,
@@ -317,8 +317,8 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
     id: "spam-202",
     senderName: "Quantum Crypto Airdrop Bot",
     senderEmail: "noreply@crypto-wealth-quantum-airdrop.io",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "🎁 CONGRATULATIONS! 2.85 BTC payout awaiting your confirmation",
     snippet: "Your wallet was selected for the weekly VIP Arbitrage Airdrop. Click here...",
     body: `Congratulations!\n\nYou have been selected as one of 5 winners in the monthly Quantum Blockchain Airdrop.\n\nYour Reward: 2.8500 BTC (~$185,000 USD)\n\nTo unlock the payout to your private wallet, please send a network fee of 0.01 BTC to the following address:\nbc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh\n\nOffer expires in 24 hours!`,
@@ -340,8 +340,8 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
     id: "spam-203",
     senderName: "Mega Jackpot VIP Club",
     senderEmail: "promo@mega-jackpot-vip-casino.xyz",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "🎰 Exclusive: 500 Free Spins + $1,000 No-Deposit Bonus Claim",
     snippet: "Today only: VIP access to new crypto casino with 1000% welcome bonus activated!",
     body: `Hello VIP Player,\n\nYour VIP account is ready! We are giving you 500 free spins today on top slots and matching your deposit 10x.\n\nClick here to claim promo code 'SYNTAX500':\n👉 http://casino-vip-promo.xyz/bonus\n\nGood luck winning!\nYour Mega Jackpot Promo Team`,
@@ -363,13 +363,13 @@ const INITIAL_DEMO_MESSAGES_EN: EmailMessage[] = [
   // 3. SENT MESSAGES
   {
     id: "sent-301",
-    senderName: "Philipp Steidle",
-    senderEmail: "philippsteidle5@gmail.com",
+    senderName: "PapayaOS Admin",
+    senderEmail: "admin@papayaos.local",
     recipientName: "Alex Mercer",
     recipientEmail: "alex.mercer@cyber-enterprises.com",
     subject: "Re: Quantum Matrix API Integration & Setup",
     snippet: "Hello Alex, the API credentials have been stored in the encrypted vault...",
-    body: `Hello Alex,\n\nThank you for reaching out. The API credentials for the S.Y.N.T.A.X. Sovereign Matrix have been successfully provisioned.\n\nYou can review the documentation at /docs/quantum.\n\nBest regards,\nPhilipp Steidle`,
+    body: `Hello Alex,\n\nThank you for reaching out. The API credentials for the S.Y.N.T.A.X. Sovereign Matrix have been successfully provisioned.\n\nYou can review the documentation at /docs/quantum.\n\nBest regards,\nPapayaOS Admin`,
     timestamp: "Yesterday 3:40 PM",
     fullDate: "Tue, Aug 11, 2026, 3:40:00 PM",
     relativeTime: "Yesterday",
@@ -388,8 +388,8 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
     id: "demo-101",
     senderName: "Shopify Merchant Ops",
     senderEmail: "orders@shopify-notifications.com",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "⚡ Neue Bestellung #4892 - $1,420.00 USD empfangen",
     snippet: "Kunde Alex Mercer hat 2x Quantum Neural Core V2 bestellt. Zahlung via PayPal verifiziert.",
     body: `Hallo Philipp,\n\nEine neue Bestellung (#4892) wurde soeben über Deinen Shopify Store registriert.\n\nBestelldetails:\n- 2x Quantum Neural Core V2 ($710.00 / Stk)\n- Gesamtbetrag: $1,420.00 USD\n- Zahlungsstatus: Bezahlt via PayPal\n\nDer S.Y.N.T.A.X. Trading Bot hat die Transaktion in Echtzeit protokolliert.\n\nBeste Grüße,\nShopify Merchant Ops Engine`,
@@ -409,11 +409,11 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
     id: "demo-102",
     senderName: "PayPal Business Service",
     senderEmail: "service@paypal-business.com",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "Guthaben-Benachrichtigung: +€2,850.00 auf Konto gutgeschrieben",
     snippet: "Überweisung von S.Y.N.T.A.X. Neural Trading Sub-Account. Neuer Kontostand: €18,450.00.",
-    body: `Sehr geehrter Herr Steidle,\n\nWir bestätigen den Eingang einer Gutschrift auf Ihrem PayPal Business Konto.\n\nBetrag: +2,850.00 EUR\nVerwendungszweck: Daily Arbitrage Profits\nAn Empfänger: philippsteidle5@gmail.com\n\nIhr neues verfügbares Guthaben beträgt €18,450.00.\n\nMit freundlichen Grüßen,\nIhr PayPal Business Team`,
+    body: `Sehr geehrter Herr Steidle,\n\nWir bestätigen den Eingang einer Gutschrift auf Ihrem PayPal Business Konto.\n\nBetrag: +2,850.00 EUR\nVerwendungszweck: Daily Arbitrage Profits\nAn Empfänger: admin@papayaos.local\n\nIhr neues verfügbares Guthaben beträgt €18,450.00.\n\nMit freundlichen Grüßen,\nIhr PayPal Business Team`,
     timestamp: "13:10 Uhr",
     fullDate: "Mi., 12.08.2026, 13:10:00 Uhr",
     relativeTime: "vor 2 Std",
@@ -430,11 +430,11 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
     id: "demo-103",
     senderName: "GitHub Security Agent",
     senderEmail: "no-reply@github.com",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "Claude Code Commit: Build #808 erfolgreich compiliert",
     snippet: "Agent VECTOR hat 48 Zeilen in ParticleSphere.tsx refactored. 0 Errors.",
-    body: `Repository: syntax-core-org/quantum-applet\nBranch: main\nEmpfänger: philippsteidle5@gmail.com\n\nCommit Details:\n- Author: Agent VECTOR via Claude Code CLI\n- Message: Add live quantum fibonacci lattice shader optimization\n- Status: All tests green`,
+    body: `Repository: syntax-core-org/quantum-applet\nBranch: main\nEmpfänger: admin@papayaos.local\n\nCommit Details:\n- Author: Agent VECTOR via Claude Code CLI\n- Message: Add live quantum fibonacci lattice shader optimization\n- Status: All tests green`,
     timestamp: "Gestern 18:30 Uhr",
     fullDate: "Di., 11.08.2026, 18:30:00 Uhr",
     relativeTime: "Gestern",
@@ -452,8 +452,8 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
     id: "spam-201",
     senderName: "Sicherheits-Center Alert",
     senderEmail: "security-alert@account-verify-auth99.net",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "🚨 Dringend: Ihr Banking & Google Account wurde temporär gesperrt",
     snippet: "Unautorisierter Zugriff aus Moskau festgestellt. Bitte verifizieren Sie Ihr Passwort innerhalb von 2 Stunden...",
     body: `WICHTIGE SICHERHEITSWARNUNG!\n\nSehr geehrter Kunde,\n\nWir haben verdächtige Anmeldeversuche auf Ihrem Konto festgestellt (IP: 185.220.101.4 - Moskau, RU).\n\nAus Sicherheitsgründen wurden alle Transaktionen vorübergehend angehalten.\n\nKlicken Sie auf den folgenden Link, um Ihre Identität und Ihr Passwort sofort zu bestätigen:\n👉 http://phishing-fake-login.verify-auth99.net/confirm-identity\n\nFalls Sie diese Verifizierung nicht innerhalb von 2 Stunden durchführen, wird Ihr Konto unwiderruflich gelöscht.\n\nSicherheitsteam Kundenservice`,
@@ -475,8 +475,8 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
     id: "spam-202",
     senderName: "Quantum Crypto Airdrop Bot",
     senderEmail: "noreply@crypto-wealth-quantum-airdrop.io",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "🎁 GLÜCKWUNSCH! 2.85 BTC Auszahlung wartet auf Ihre Bestätigung",
     snippet: "Ihre Wallet-Adresse wurde für den wöchentlichen VIP Arbitrage Airdrop ausgewählt. Klicken Sie hier...",
     body: `Herzlichen Glückwunsch!\n\nSie wurden als einer von 5 Gewinnern des monatlichen Quantum Blockchain Airdrops ermittelt.\n\nIhr Gewinn: 2.8500 BTC (~$185,000 USD)\n\nUm die Auszahlung auf Ihre private Wallet freizuschalten, überweisen Sie bitte eine Netzwerkgebühr von 0.01 BTC an die folgende Einzahlungsadresse:\nbc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh\n\nAngebot verfällt in 24 Stunden!`,
@@ -498,8 +498,8 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
     id: "spam-203",
     senderName: "Mega Jackpot VIP Club",
     senderEmail: "promo@mega-jackpot-vip-casino.xyz",
-    recipientName: "Philipp Steidle",
-    recipientEmail: "philippsteidle5@gmail.com",
+    recipientName: "PapayaOS Admin",
+    recipientEmail: "admin@papayaos.local",
     subject: "🎰 Exklusiv: 500 Freispiele + €1,000 Bonus ohne Einzahlung sichern",
     snippet: "Nur heute: VIP Zugang zum neuen Krypto-Casino mit 1000% Willkommensbonus freigeschaltet!",
     body: `Hallo VIP Spieler,\n\nDein VIP-Konto ist bereit! Wir schenken Dir heute 500 Freispiele an den beliebtesten Slots und verdoppeln Deine erste Einzahlung um das 10-fache.\n\nKlicke hier um Deinen Promo-Code 'SYNTAX500' einzulösen:\n👉 http://casino-vip-promo.xyz/bonus\n\nViel Glück beim Gewinnen!\nDein Mega Jackpot Promotion Team`,
@@ -521,13 +521,13 @@ const INITIAL_DEMO_MESSAGES_DE: EmailMessage[] = [
   // 3. SENT MESSAGES
   {
     id: "sent-301",
-    senderName: "Philipp Steidle",
-    senderEmail: "philippsteidle5@gmail.com",
+    senderName: "PapayaOS Admin",
+    senderEmail: "admin@papayaos.local",
     recipientName: "Alex Mercer",
     recipientEmail: "alex.mercer@cyber-enterprises.com",
     subject: "Re: Quantum Matrix API Integration & Setup",
     snippet: "Hallo Alex, die API Credentials wurden im verschlüsselten Vault hinterlegt...",
-    body: `Hallo Alex,\n\nvielen Dank für Deine Anfrage. Die API Credentials für die S.Y.N.T.A.X. Sovereign Matrix wurden erfolgreich provisioniert.\n\nDu kannst die Dokumentation unter /docs/quantum einsehen.\n\nBeste Grüße,\nPhilipp Steidle`,
+    body: `Hallo Alex,\n\nvielen Dank für Deine Anfrage. Die API Credentials für die S.Y.N.T.A.X. Sovereign Matrix wurden erfolgreich provisioniert.\n\nDu kannst die Dokumentation unter /docs/quantum einsehen.\n\nBeste Grüße,\nPapayaOS Admin`,
     timestamp: "Gestern 15:40 Uhr",
     fullDate: "Di., 11.08.2026, 15:40:00 Uhr",
     relativeTime: "Gestern",
@@ -550,7 +550,7 @@ interface GmailInboxWidgetProps {
 export const GmailInboxWidget: React.FC<GmailInboxWidgetProps> = ({
   isEditMode = false,
   onClose,
-  accountEmail = "philippsteidle5@gmail.com",
+  accountEmail = "admin@papayaos.local",
   lang = "en",
 }) => {
   const isEn = lang === "en";
@@ -910,7 +910,7 @@ export const GmailInboxWidget: React.FC<GmailInboxWidgetProps> = ({
             id: msg.id,
             senderName: senderName || "Unbekannter Absender",
             senderEmail: senderEmail || "gmail-user@google.com",
-            recipientName: recipientName || "Philipp Steidle",
+            recipientName: recipientName || "PapayaOS Admin",
             recipientEmail: recipientEmail || realUserEmail,
             subject,
             snippet,
@@ -1222,8 +1222,8 @@ ${selectedMsg.body}`,
       if (res.ok) {
         const data = await res.json();
         const defaultReply = isEn
-          ? `Dear ${selectedMsg.senderName},\n\nThank you for reaching out regarding "${selectedMsg.subject}".\n\nI have received your information and am addressing it promptly.\n\nBest regards,\nPhilipp Steidle\nS.Y.N.T.A.X. Sovereign Intelligence`
-          : `Sehr geehrte/r ${selectedMsg.senderName},\n\nvielen Dank für Ihre Nachricht bezüglich "${selectedMsg.subject}".\n\nIch habe Ihre Informationen erhalten und werde mich umgehend darum kümmern.\n\nMit freundlichen Grüßen,\nPhilipp Steidle\nS.Y.N.T.A.X. Sovereign Intelligence`;
+          ? `Dear ${selectedMsg.senderName},\n\nThank you for reaching out regarding "${selectedMsg.subject}".\n\nI have received your information and am addressing it promptly.\n\nBest regards,\nPapayaOS Admin\nS.Y.N.T.A.X. Sovereign Intelligence`
+          : `Sehr geehrte/r ${selectedMsg.senderName},\n\nvielen Dank für Ihre Nachricht bezüglich "${selectedMsg.subject}".\n\nIch habe Ihre Informationen erhalten und werde mich umgehend darum kümmern.\n\nMit freundlichen Grüßen,\nPapayaOS Admin\nS.Y.N.T.A.X. Sovereign Intelligence`;
         const replyText = data.response || data.claude || defaultReply;
         setComposeTo(selectedMsg.senderEmail);
         setComposeSubject(`Re: ${selectedMsg.subject}`);
@@ -1238,8 +1238,8 @@ ${selectedMsg.body}`,
       setComposeSubject(`Re: ${selectedMsg.subject}`);
       setComposeBody(
         isEn
-          ? `Hello ${selectedMsg.senderName},\n\nThank you for your message to ${selectedMsg.recipientEmail || realUserEmail}. S.Y.N.T.A.X. Agent ${activeAgentPersona.toUpperCase()} has logged the inquiry.\n\nBest regards,\nPhilipp Steidle`
-          : `Hallo ${selectedMsg.senderName},\n\nvielen Dank für Deine Nachricht an ${selectedMsg.recipientEmail || realUserEmail}. S.Y.N.T.A.X. Agent ${activeAgentPersona.toUpperCase()} hat die Anfrage erfasst.\n\nBeste Grüße,\nPhilipp Steidle`
+          ? `Hello ${selectedMsg.senderName},\n\nThank you for your message to ${selectedMsg.recipientEmail || realUserEmail}. S.Y.N.T.A.X. Agent ${activeAgentPersona.toUpperCase()} has logged the inquiry.\n\nBest regards,\nPapayaOS Admin`
+          : `Hallo ${selectedMsg.senderName},\n\nvielen Dank für Deine Nachricht an ${selectedMsg.recipientEmail || realUserEmail}. S.Y.N.T.A.X. Agent ${activeAgentPersona.toUpperCase()} hat die Anfrage erfasst.\n\nBeste Grüße,\nPapayaOS Admin`
       );
       setIsComposing(true);
       showToast(isEn ? "✨ Default AI draft loaded." : "✨ Standard KI-Entwurf geladen.", "info");
@@ -2223,7 +2223,7 @@ ${selectedMsg.body}`,
                           {isEn ? "TO (RECIPIENT):" : "AN (EMPFÄNGER):"}
                         </div>
                         <div className="font-semibold text-zinc-100 truncate flex items-center gap-1">
-                          <span>{selectedMsg.recipientName || "Philipp Steidle"}</span>
+                          <span>{selectedMsg.recipientName || "PapayaOS Admin"}</span>
                           <button
                             onClick={() => copyToClipboard(selectedMsg.recipientEmail || realUserEmail, "Empfänger E-Mail")}
                             className="text-zinc-500 hover:text-zinc-300 p-0.5"
