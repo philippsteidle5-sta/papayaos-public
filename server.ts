@@ -1601,7 +1601,7 @@ async function startServer() {
 
   app.post(["/api/chat", "/api/agent", "/api/agent/multi", "/api/maze", "/api/syntax"], async (req, res) => {
     try {
-      const { message, history, agent, compare, image, images, video, videos, scope, dailyObjectives, clientDateStr, memoryContext, userMemory, linkedAppsContext } = req.body;
+      const { message, history, agent, compare, image, images, video, videos, scope, dailyObjectives, clientDateStr, memoryContext, userMemory, linkedAppsContext, agentWorkflowContexts } = req.body;
       const customKey = req.headers["x-custom-gemini-key"] as string | undefined;
 
       // Build real-time system date & time synchronizer context
@@ -1659,6 +1659,17 @@ STRIKTE ANWEISUNG FÜR DIE ANALYSE DIESER WEBSEITE:
         userMemoryPromptContext = `\n\n=== PERSISTENTES LANGZEITGEDÄCHTNIS (ECHTE NUTZER-ANGABEN) ===
 ${preferredName ? `• NAME DES NUTZERS: "${preferredName}"\n` : ""}${factsList ? `• VOM NUTZER GENANNTE FAKTEN:\n${factsList}\n` : ""}${directivesList ? `• REGELN DES NUTZERS:\n${directivesList}\n` : ""}=== ENDE LANGZEITGEDÄCHTNIS ===`;
       }
+
+      const buildAgentMemoryPromptContext = (agentId: string) => {
+        if (!userMemory) return "";
+        const facts = Array.isArray(userMemory.facts) ? userMemory.facts.slice(0, 25) : [];
+        const directives = Array.isArray(userMemory.customDirectives) ? userMemory.customDirectives.slice(0, 15) : [];
+        const notes = Array.isArray(userMemory.agentSpecificNotes?.[agentId]) ? userMemory.agentSpecificNotes[agentId].slice(0, 10) : [];
+        const preferredName = typeof userMemory.preferredName === "string" ? userMemory.preferredName : "";
+        if (!preferredName && facts.length === 0 && directives.length === 0 && notes.length === 0) return "";
+        return `\n\n=== PERSISTENTES LANGZEITGEDÄCHTNIS (${agentId.toUpperCase()}) ===
+${preferredName ? `• NAME DES NUTZERS: "${preferredName}"\n` : ""}${facts.length ? `• FAKTEN:\n${facts.map((fact: any, index: number) => `  [${index + 1}] ${typeof fact === "string" ? fact : fact.fact || JSON.stringify(fact)}`).join("\n")}\n` : ""}${directives.length ? `• REGELN:\n${directives.map((directive: string, index: number) => `  [${index + 1}] ${directive}`).join("\n")}\n` : ""}${notes.length ? `• NOTIZEN FÜR ${agentId.toUpperCase()}:\n${notes.map((note: string) => `  - ${note}`).join("\n")}\n` : ""}=== ENDE LANGZEITGEDÄCHTNIS ===`;
+      };
 
       let ai;
       let usedCustomKey = false;
@@ -1938,6 +1949,13 @@ ${preferredName ? `• NAME DES NUTZERS: "${preferredName}"\n` : ""}${factsList 
           const agentPromises = targetIds.map(async (agId) => {
             const agName = getAgentDisplayName(agId);
             const basePrompt = getAgentSystemPrompt(agId);
+            const agentWorkflow = agentWorkflowContexts && typeof agentWorkflowContexts === "object" ? agentWorkflowContexts[agId] : undefined;
+            const agentMemoryPromptContext = agentWorkflow && typeof agentWorkflow.useMemory === "boolean"
+              ? (agentWorkflow.useMemory ? buildAgentMemoryPromptContext(agId) : "")
+              : userMemoryPromptContext;
+            const agentLinkedAppsPromptContext = agentWorkflow && typeof agentWorkflow.linkedAppsContext === "string"
+              ? `\n\n${agentWorkflow.linkedAppsContext.trim()}\n`
+              : linkedAppsPromptContext;
             const isGlobeSearch = agId?.toLowerCase() === "globe";
             const toolsConfig = (!hasMedia && (isGlobeSearch || hasUrlsInPrompt || agId === "neo" || agId === "maze")) ? [{ googleSearch: {} }] : undefined;
             const thisAgentFocus = agentFocusMap[agId.toLowerCase()] || `${agName}: Spezialfokus`;
@@ -1954,7 +1972,7 @@ ${preferredName ? `• NAME DES NUTZERS: "${preferredName}"\n` : ""}${factsList 
   - Im Gedanken [GEDANKE]: 1 Satz aus deiner Perspektive als ${agName}.
   - In der Antwort [ANTWORT]: Formuliere als ${agName} (z.B. "Hier ist ${agName}..." oder direkte Fachantwort aus deiner Rolle).`;
 
-            const systemPrompt = `${basePrompt}${dateTimeContext}${dailyObjectivesContext}${userMemoryPromptContext}${webInspectionContext}
+            const systemPrompt = `${basePrompt}${dateTimeContext}${dailyObjectivesContext}${agentMemoryPromptContext}${webInspectionContext}${agentLinkedAppsPromptContext}
 
 STRIKTE INDIVIDUELLE AGENTEN-INSTRUKTION:
 ${identitySecurityDirective}
@@ -1964,7 +1982,7 @@ STRIKTE REGELN FÜR DICH ALS ${agName}:
 2. Sprich NIEMALS im Namen anderer Agenten (wie SYNTAX, N.E.O., VEGA usw.)! Erwähne KEINE anderen Agenten!
 3. Erstelle KEINE Listen oder Aufzählungen für andere Agenten!
 4. ANSPRACHE & ERINNERUNGEN: Sei kein stummer Zahlen-Roboter. Wenn der Nutzer nach Erinnerungen, früheren Fragen ("Erinnerst du dich an...") oder Details fragt, bestätige dies direkt mit futuristischer Coolness und Witz, bevor du die exakte Lösung lieferst.
-5. Sprich den Nutzer stets mit "${userMemory?.preferredName || 'Mr'}" an.
+5. Sprich den Nutzer ${agentWorkflow?.useMemory === false ? "direkt" : userMemory?.preferredName ? `mit "${userMemory.preferredName}"` : "direkt"} an.
 
 Gliedere deine Ausgabe starr in zwei Teile:
 🧠 [GEDANKE]: 1 Satz scharfsinniger interner Gedanke rein aus deiner Perspektive als ${agName}.
@@ -4838,6 +4856,9 @@ User prompt: "${finalPrompt}"`,
   const salesPagePath = path.join(process.cwd(), "public", "sales-preview.html");
   app.get("/", (req, res, next) => {
     if (req.query.app === "true") return next();
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     return res.sendFile(salesPagePath);
   });
 

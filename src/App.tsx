@@ -91,7 +91,7 @@ import { AdminDatabaseModal } from "./components/AdminDatabaseModal";
 import { PapayaAccessScreen } from "./components/PapayaAccessScreen";
 import { OsirisIntelToolModal } from "./components/OsirisIntelToolModal";
 import { AppAndToolManagerModal } from "./components/AppAndToolManagerModal";
-import { getLinkedAppsContextForPrompt } from "./utils/agentAppLinksStore";
+import { getAgentWorkflowSettings, getLinkedAppsContextForPrompt } from "./utils/agentAppLinksStore";
 import { AdminConversionAnalyticsModal } from "./components/AdminConversionAnalyticsModal";
 import { startTelemetryHeartbeat, updateTelemetryContext } from "./utils/telemetryClient";
 import { OneMinuteTutorialModal } from "./components/OneMinuteTutorialModal";
@@ -128,6 +128,18 @@ import {
   autoRedeemKeyFromUrlQuery,
   getActiveAccessKey,
 } from "./utils/leadDatabase";
+
+const WORKFLOW_CORE_IDS = ["syntax", "neo", "vega", "odin", "pulse", "chronos", "oracle", "globe"];
+
+function getAgentWorkflowPromptContexts(isAdmin: boolean) {
+  return Object.fromEntries(WORKFLOW_CORE_IDS.map((agentId) => {
+    const settings = getAgentWorkflowSettings(agentId);
+    return [agentId, {
+      useMemory: settings.useMemory,
+      linkedAppsContext: getLinkedAppsContextForPrompt(agentId, isAdmin),
+    }];
+  }));
+}
 
 const AGENTS: AgentConfig[] = [
   {
@@ -3460,11 +3472,14 @@ export default function App() {
     const liveObjectivesSummary = getGoalsSummaryForSparring(lang);
 
     // Infallible persistent memory extraction from user text
-    extractAndSaveMemoryFromUserText(text, agentId);
+    const agentWorkflow = getAgentWorkflowSettings(agentId);
+    const agentWorkflowContexts = effectiveScope === "SINGLE" ? undefined : getAgentWorkflowPromptContexts(isAdminUser);
+    const memoryEnabledForRequest = agentWorkflow.useMemory || Boolean(agentWorkflowContexts && Object.values(agentWorkflowContexts).some((workflow) => workflow.useMemory));
+    if (memoryEnabledForRequest) extractAndSaveMemoryFromUserText(text, agentId);
 
     // Get persistent memory context for prompt
-    const memoryContext = getPersistentMemoryContextForPrompt(agentId);
-    const userMemory = getPersistentMemory();
+    const memoryContext = agentWorkflow.useMemory ? getPersistentMemoryContextForPrompt(agentId) : "";
+    const userMemory = memoryEnabledForRequest ? getPersistentMemory() : null;
 
     try {
       const data = await safeFetchJson("/api/chat", {
@@ -3494,6 +3509,7 @@ export default function App() {
           memoryContext,
           userMemory,
           linkedAppsContext: getLinkedAppsContextForPrompt(agentId, isAdminUser),
+          agentWorkflowContexts,
         }),
       });
 
@@ -4072,13 +4088,17 @@ export default function App() {
       const liveObjectivesSummary = getGoalsSummaryForSparring(lang);
 
       // Infallible persistent memory extraction from user text
-      if (rawMessage) {
+      const agentWorkflow = getAgentWorkflowSettings(currentAgent.id);
+      const isMultiAgentRequest = communicationScope === "ALL" || communicationScope === "THE_BIG_3" || communicationScope === "AGENT_SYNC";
+      const agentWorkflowContexts = isMultiAgentRequest ? getAgentWorkflowPromptContexts(isAdminUser) : undefined;
+      const memoryEnabledForRequest = agentWorkflow.useMemory || Boolean(agentWorkflowContexts && Object.values(agentWorkflowContexts).some((workflow) => workflow.useMemory));
+      if (rawMessage && memoryEnabledForRequest) {
         extractAndSaveMemoryFromUserText(rawMessage, currentAgent.id);
       }
 
       // Get persistent memory context for prompt
-      const memoryContext = getPersistentMemoryContextForPrompt(currentAgent.id);
-      const userMemory = getPersistentMemory();
+      const memoryContext = agentWorkflow.useMemory ? getPersistentMemoryContextForPrompt(currentAgent.id) : "";
+      const userMemory = memoryEnabledForRequest ? getPersistentMemory() : null;
 
       const data = await safeFetchJson("/api/chat", {
         method: "POST",
@@ -4111,6 +4131,7 @@ export default function App() {
           memoryContext,
           userMemory,
           linkedAppsContext: getLinkedAppsContextForPrompt(currentAgent.id, isAdminUser),
+          agentWorkflowContexts,
         }),
       });
 
