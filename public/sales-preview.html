@@ -877,7 +877,11 @@ accessDialog?.addEventListener('click',e=>{if(e.target===accessDialog)closeSales
 addEventListener('message',event=>{
   if(event.origin!==accessOrigin||event.source!==accessFrame?.contentWindow)return;
   if(event.data?.type==='papayaos:close-login')closeSalesLogin();
-  if(event.data?.type==='papayaos:auth-success'){closeSalesLogin();location.assign(new URL('?app=true',accessBase).href);}
+  if(event.data?.type==='papayaos:auth-success'){
+    closeSalesLogin();
+    if(window.parent!==window)window.parent.postMessage({type:'papayaos:auth-success'},accessOrigin);
+    else location.assign(new URL('?app=true',accessBase).href);
+  }
 });
 document.querySelectorAll('a[href="#waitlist2"]').forEach(a=>a.addEventListener('click',()=>{
   setTimeout(()=>{const i=document.getElementById('em2');if(i)i.focus({preventScroll:true})},700);

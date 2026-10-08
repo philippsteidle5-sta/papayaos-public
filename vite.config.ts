@@ -45,8 +45,9 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          navigateFallback: '/sales-preview.html',
-          navigateFallbackDenylist: [/^\/\?(?:[^&]*&)*app=true(?:&|$)/],
+          // The offline navigation shell must remain the React app. It decides
+          // whether to show the sales page or the authenticated workspace.
+          navigateFallback: '/index.html',
           skipWaiting: true,
           clientsClaim: true,
           cleanupOutdatedCaches: true,

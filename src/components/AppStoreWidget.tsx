@@ -10,6 +10,7 @@ import {
   Calendar,
   MapPin,
   Target,
+  Workflow,
   Trash2,
   Loader2,
   Check,
@@ -142,6 +143,18 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
         installed: installedPluginIds.includes("goals"),
         modelInfo: "PapayaOS Habit Engine",
         contextWindow: "Complete Goal Sync",
+      },
+      {
+        id: "papayaFlow",
+        name: "Papaya Flow Studio",
+        category: isEn ? "Agents & workflows" : "Agenten & Abläufe",
+        description: isEn
+          ? "Configure each PapayaOS agent: choose its functions, shared memory, approval rules and working instructions. Native PapayaOS feature."
+          : "Konfiguriere pro PapayaOS-Agent Funktionen, gemeinsames Memory, Freigaben und Arbeitsanweisungen. Native PapayaOS-Funktion.",
+        version: isEn ? "v1.0 Preview" : "v1.0 Vorschau",
+        installed: installedPluginIds.includes("papayaFlow"),
+        modelInfo: "PapayaOS Native",
+        contextWindow: isEn ? "Per-agent settings" : "Einstellungen je Agent",
       },
     ];
   }, [isEn, installedPluginIds]);
@@ -669,6 +682,8 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
                     <MapPin className="w-6 h-6 text-emerald-400" />
                   ) : activePluginModal.id === "goals" ? (
                     <Target className="w-6 h-6 text-[#ff7a59]" />
+                  ) : activePluginModal.id === "papayaFlow" ? (
+                    <Workflow className="w-6 h-6 text-orange-300" />
                   ) : (
                     <LayoutGrid className="w-6 h-6 text-[#ff8a3d]" />
                   )}

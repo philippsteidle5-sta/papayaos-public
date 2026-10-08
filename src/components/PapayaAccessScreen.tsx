@@ -222,7 +222,7 @@ export const PapayaAccessScreen: React.FC<PapayaAccessScreenProps> = ({
       setError(copy.invalidEmail);
       return;
     }
-    if (password.length < 8) {
+    if (mode === "register" && password.length < 8) {
       setError(copy.shortPassword);
       return;
     }

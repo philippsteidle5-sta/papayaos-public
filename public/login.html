@@ -147,7 +147,20 @@ body.embedded .field{height:52px}
         endpoint="/api/auth/register";payload={name:em.split("@")[0],email:em,password:password,confirmPassword:confirmInput.value,plan:"PRO_29",goal:"PapayaOS Beta Zugang"};
       }
       var response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(payload)}),data=await response.json();
-      if(!response.ok||data.ok!==true)throw new Error(data.message||"Anmeldung fehlgeschlagen.");
+      if(!response.ok||data.ok!==true||!data.user)throw new Error(data.message||"Anmeldung fehlgeschlagen.");
+      var sessionResponse=await fetch("/api/auth/me",{credentials:"same-origin",cache:"no-store"});
+      var sessionData=sessionResponse.ok?await sessionResponse.json():null;
+      if(!sessionData?.ok||!sessionData.user?.email)throw new Error("Die Anmeldung konnte nicht gespeichert werden. Bitte versuche es erneut.");
+      var user=sessionData.user,accountEmail=user.email.trim().toLowerCase();
+      try{
+        localStorage.setItem("syntax_current_user_email",accountEmail);
+        localStorage.setItem("maze_current_user_email",accountEmail);
+        localStorage.setItem("syntax_admin_authenticated_session",String(user.isFullCoreAdmin===true));
+        localStorage.setItem("maze_registered_vip_user",JSON.stringify({name:user.name,email:accountEmail,slot:user.slot,plan:user.plan,role:user.role}));
+        localStorage.setItem("syntax_entered_matrix_session","true");
+        sessionStorage.setItem("syntax_entered_matrix_session","true");
+        sessionStorage.setItem("syntax_user_preferred_view","app");
+      }catch{}
       msg.style.color="#9be6b1";msg.textContent=mode==="register"?"Konto erstellt. Workspace wird geöffnet.":"Angemeldet. Workspace wird geöffnet.";await finishSignIn();
     }catch(error){msg.style.color="#ff9a7a";msg.textContent=error instanceof Error?error.message:"Verbindung fehlgeschlagen. Bitte versuche es erneut."}
     finally{go.disabled=false;go.removeAttribute("aria-busy")}

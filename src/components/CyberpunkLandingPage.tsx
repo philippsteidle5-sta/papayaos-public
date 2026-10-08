@@ -25,6 +25,7 @@ export const CyberpunkLandingPage: React.FC<CyberpunkLandingPageProps> = ({ onEn
     const handleSalesPageMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
       if (event.data?.type === "papayaos:open-login") setLoginOpen(true);
+      if (event.data?.type === "papayaos:auth-success") window.location.assign("/?app=true");
     };
     window.addEventListener("message", handleSalesPageMessage);
     return () => window.removeEventListener("message", handleSalesPageMessage);

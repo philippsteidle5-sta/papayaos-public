@@ -3127,7 +3127,7 @@ User prompt: "${finalPrompt}"`,
     const rawSessionId = crypto.randomBytes(32).toString("base64url");
     authSessions.set(sessionKey(rawSessionId), { userId: user.id, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
     saveSessions();
-    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    const secure = res.req?.secure ? "; Secure" : "";
     res.setHeader("Set-Cookie", `papaya_session=${rawSessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${secure}`);
   }
 
@@ -3241,14 +3241,44 @@ User prompt: "${finalPrompt}"`,
     serverUserAccounts = storedAccounts.filter((account) => account && typeof account.email === "string" && typeof account.passwordHash === "string");
   }
 
-  const configuredAdmin = serverUserAccounts.find((account) => account.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase());
-  if (configuredAdmin && process.env.PAPAYA_ADMIN_PASSWORD) {
-    configuredAdmin.passwordHash = hashPassword(process.env.PAPAYA_ADMIN_PASSWORD);
-    configuredAdmin.isFullCoreAdmin = true;
-    configuredAdmin.role = "FULL_CORE_ADMIN";
-    configuredAdmin.plan = "FULL_CORE_ADMIN";
-    configuredAdmin.token = "";
+  // Always restore the environment-configured admin after loading persisted users.
+  // A stale/partial auth-users.json must never replace the preconfigured account.
+  const configuredAdminPassword = process.env.PAPAYA_ADMIN_PASSWORD || "";
+  if (SUPERADMIN_EMAIL && configuredAdminPassword) {
+    let configuredAdmin = serverUserAccounts.find((account) => account.email.trim().toLowerCase() === SUPERADMIN_EMAIL);
+    if (!configuredAdmin) {
+      configuredAdmin = {
+        id: "usr_admin",
+        email: SUPERADMIN_EMAIL,
+        name: "PapayaOS Administrator",
+        role: "FULL_CORE_ADMIN",
+        plan: "FULL_CORE_ADMIN",
+        planName: "FULL CORE ADMIN (SUPERADMIN ROOT)",
+        priceMonthly: 0,
+        slot: 1,
+        status: "GRANTED",
+        isFullCoreAdmin: true,
+        token: "",
+        passwordHash: hashPassword(configuredAdminPassword),
+        createdAt: "2026-01-01T00:00:00.000Z",
+        notes: "Full Core Admin account",
+      };
+      serverUserAccounts.unshift(configuredAdmin);
+    } else {
+      configuredAdmin.email = SUPERADMIN_EMAIL;
+      configuredAdmin.role = "FULL_CORE_ADMIN";
+      configuredAdmin.plan = "FULL_CORE_ADMIN";
+      configuredAdmin.planName = "FULL CORE ADMIN (SUPERADMIN ROOT)";
+      configuredAdmin.priceMonthly = 0;
+      configuredAdmin.slot = 1;
+      configuredAdmin.status = "GRANTED";
+      configuredAdmin.isFullCoreAdmin = true;
+      configuredAdmin.token = "";
+      configuredAdmin.passwordHash = hashPassword(configuredAdminPassword);
+    }
     saveAccounts();
+  } else if (SUPERADMIN_EMAIL) {
+    console.error("[AUTH] PAPAYA_ADMIN_PASSWORD is not configured; the preconfigured admin cannot sign in.");
   }
 
   let serverLeadsDatabase: any[] = SUPERADMIN_EMAIL ? [
@@ -3483,7 +3513,7 @@ User prompt: "${finalPrompt}"`,
       authSessions.delete(sessionKey(raw.slice("papaya_session=".length)));
       saveSessions();
     }
-    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    const secure = req.secure ? "; Secure" : "";
     res.setHeader("Set-Cookie", `papaya_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secure}`);
     return res.json({ ok: true });
   });

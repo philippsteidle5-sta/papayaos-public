@@ -46,6 +46,7 @@ interface AppAndToolManagerModalProps {
   lang?: "de" | "en";
   initialSelectedAgentId?: string;
   initialAgentId?: string;
+  initialTab?: "apps" | "agentMatrix" | "workflows";
 }
 
 export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
@@ -61,6 +62,7 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
   lang = "de",
   initialSelectedAgentId,
   initialAgentId,
+  initialTab = "apps",
 }) => {
   const { isModern } = useTheme();
   const isEn = lang === "en";
@@ -68,7 +70,7 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
   const fallbackInitialAgentId =
     initialSelectedAgentId || initialAgentId || currentAgent?.id || agents?.[0]?.id || "neo";
 
-  const [activeTab, setActiveTab] = useState<"apps" | "agentMatrix" | "workflows">("apps");
+  const [activeTab, setActiveTab] = useState<"apps" | "agentMatrix" | "workflows">(initialTab);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(fallbackInitialAgentId);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");

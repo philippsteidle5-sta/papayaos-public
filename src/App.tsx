@@ -621,22 +621,33 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile>(() => getStoredUserProfile());
   const userRole = getActiveUserRole(userProfile);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [authSessionChecked, setAuthSessionChecked] = useState(false);
   useEffect(() => {
     let active = true;
-    const verifyAdminSession = async () => {
+    const verifyAuthSession = async () => {
       try {
         const response = await fetch("/api/auth/me", { credentials: "same-origin" });
         const result = response.ok ? await response.json() : null;
-        const authorized = Boolean(
-          result?.user?.isFullCoreAdmin === true &&
-          String(result.user.email || "").trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
-        );
-        if (active) setIsAdminUser(authorized);
+        if (!active) return;
+        const user = result?.user;
+        const email = typeof user?.email === "string" ? user.email.trim().toLowerCase() : "";
+        if (email && getCurrentUserEmail() !== email) {
+          try {
+            localStorage.setItem("syntax_current_user_email", email);
+            localStorage.setItem("maze_current_user_email", email);
+            localStorage.setItem("maze_registered_vip_user", JSON.stringify({
+              name: user.name, email, slot: user.slot, plan: user.plan, role: user.role,
+            }));
+          } catch {}
+        }
+        setIsAdminUser(user?.isFullCoreAdmin === true && user?.role === "FULL_CORE_ADMIN");
       } catch {
         if (active) setIsAdminUser(false);
+      } finally {
+        if (active) setAuthSessionChecked(true);
       }
     };
-    const refresh = () => { void verifyAdminSession(); };
+    const refresh = () => { void verifyAuthSession(); };
     refresh();
     window.addEventListener("syntax_auth_state_change", refresh);
     return () => {
@@ -678,9 +689,11 @@ export default function App() {
   // App & Tool Orchestrator Modal state
   const [appToolManagerOpen, setAppToolManagerOpen] = useState<boolean>(false);
   const [selectedAgentForToolManager, setSelectedAgentForToolManager] = useState<string | undefined>(undefined);
+  const [selectedToolManagerTab, setSelectedToolManagerTab] = useState<"apps" | "agentMatrix" | "workflows">("apps");
 
-  const handleOpenAppToolManager = (agentId?: string) => {
+  const handleOpenAppToolManager = (agentId?: string, tab: "apps" | "agentMatrix" | "workflows" = "apps") => {
     setSelectedAgentForToolManager(agentId || currentAgent.id);
+    setSelectedToolManagerTab(tab);
     setAppToolManagerOpen(true);
   };
 
@@ -769,6 +782,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!authSessionChecked || accountLoginOpen) return;
     let isChecking = false;
     const checkActiveSession = async () => {
       if (isChecking) return;
@@ -912,7 +926,7 @@ export default function App() {
       window.removeEventListener("maze_auth_state_change", handleAuthEvent);
       window.removeEventListener("storage", handleAuthEvent);
     };
-  }, [showLandingPage, isAdminUser]);
+  }, [showLandingPage, isAdminUser, authSessionChecked, accountLoginOpen]);
 
   // --- AGENT FLEET STUDIO MODAL STATE ---
   const [agentFleetStudioOpen, setAgentFleetStudioOpen] = useState<boolean>(false);
@@ -4844,7 +4858,10 @@ export default function App() {
             installedPluginIds={installedPluginIds}
             onToggleInstall={handleToggleInstallPlugin}
             onOpenPlugin={(id) => {
-              if (id === "layout") {
+              if (id === "papayaFlow") {
+                handleToggleWidget("appStore");
+                handleOpenAppToolManager(currentAgent.id, "workflows");
+              } else if (id === "layout") {
                 setCoreCustomizerOpen(true);
                 handleToggleWidget("appStore");
               } else if (id === "calendar") {
@@ -5136,7 +5153,10 @@ export default function App() {
           installedPluginIds={installedPluginIds}
           onToggleInstall={handleToggleInstallPlugin}
           onOpenPlugin={(id) => {
-            if (id === "layout") {
+            if (id === "papayaFlow") {
+              handleToggleWidget("appStore");
+              handleOpenAppToolManager(currentAgent.id, "workflows");
+            } else if (id === "layout") {
               setCoreCustomizerOpen(true);
               handleToggleWidget("appStore");
             } else if (id === "calendar") {
@@ -6426,6 +6446,7 @@ export default function App() {
           activeWidgets={activeWidgets}
           onToggleWidget={handleToggleWidget}
           initialAgentId={selectedAgentForToolManager || currentAgent?.id || "neo"}
+          initialTab={selectedToolManagerTab}
           isAdmin={isAdminUser}
           onOpenApp={(appId) => {
             setAppToolManagerOpen(false);
