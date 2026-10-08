@@ -196,7 +196,7 @@
   .papaya-network-stage { inset: 100px 12px 18px; border-radius: 22px; }.papaya-network-heading { top: 15px; left: 17px; gap: 4px; }.papaya-network-heading strong { font-size: 20px; }.papaya-network-heading small { max-width: 250px; font-size: 7px; }.papaya-network-agent { width: min(172px, 39vw); min-height: 52px; gap: 7px; padding: 7px; border-radius: 13px; }.papaya-network-agent-mark { width: 29px; height: 29px; border-radius: 9px; }.papaya-network-agent-copy strong { font-size: 7px; }.papaya-network-agent-copy small { font-size: 6px; }.papaya-network-agent-arrow { width: 11px; }.papaya-network-hub { width: 178px; padding: 12px; border-radius: 18px; }.papaya-network-hub-mark { width: 38px; height: 38px; margin: 9px 0 6px; border-radius: 13px; font-size: 16px; }.papaya-network-hub > strong { font-size: 17px; }.papaya-network-hub > button { margin-top: 10px; padding: 8px; }.papaya-network-footnote { right: 13px; bottom: 12px; left: 13px; font-size: 5px; }
 }
 @media (max-width: 390px) { .focus-workspace { padding-inline: 17px; }.focus-header-tools { gap: 0; }.focus-shortcuts button { padding: 9px; }.focus-history span { display: none; }.focus-agent { grid-template-columns: 1fr; justify-items: center; text-align: center; }.focus-agent-light { grid-row: auto; } }
-@media (prefers-reduced-motion: reduce) { .focus-canvas-root *, .papaya-focus-header *, .papaya-network-stage * { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .focus-canvas-root *, .papaya-focus-header *, .papaya-network-stage * { animation: none !important; transition: none !important; }.papaya-preview-window { transform: none; } }
 
 /* One-shot Papaya reveal: a single coordinated entrance, then a calm resting state. */
 .papaya-intro-button { animation: papaya-intro-arrive .72s cubic-bezier(.16,.82,.22,1) .2s both; }
@@ -211,6 +211,10 @@
 .papaya-network-hub-eyebrow i { animation: papaya-node-arrive .55s .96s ease-out both; }
 .papaya-network-hub-mark { animation: papaya-mark-settle .75s 1.02s cubic-bezier(.16,.82,.22,1) both; }
 .papaya-network-footnote i { animation: papaya-node-arrive .55s 1.35s ease-out both; }
+.papaya-visual-aura { animation: papaya-aura-reveal 1.5s ease-out both; }
+.papaya-floating-note { animation: papaya-note-arrive 1.05s cubic-bezier(.2,.75,.2,1) both; }
+.papaya-floating-note--memory { animation-delay: .42s; }
+.papaya-floating-note--goals { animation-delay: .58s; }
 .papaya-seal-orbit--a { animation: papaya-seal-turn 1.35s cubic-bezier(.2,.75,.2,1) both; }
 .papaya-seal-orbit--b { animation: papaya-seal-turn 1.65s cubic-bezier(.2,.75,.2,1) reverse both; }
 .papaya-seal-arc { animation: papaya-seal-turn .95s ease-out both; }
@@ -227,6 +231,7 @@
 @keyframes papaya-hub-bloom { from { opacity: 0; filter: blur(8px); scale: .72; } 75% { opacity: 1; filter: blur(0); scale: 1.045; } to { opacity: 1; filter: blur(0); scale: 1; } }
 @keyframes papaya-mark-settle { from { transform: translateY(9px) rotate(-16deg) scale(.68); filter: brightness(1.7); } 70% { transform: translateY(-2px) rotate(4deg) scale(1.08); filter: brightness(1.2); } to { transform: translateY(0) rotate(0) scale(1); filter: brightness(1); } }
 @keyframes papaya-aura-reveal { from { opacity: 0; transform: scale(.72); } 65% { opacity: .9; transform: scale(1.08); } to { opacity: .72; transform: scale(1); } }
+@keyframes papaya-note-arrive { from { opacity: 0; transform: translateY(18px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes papaya-seal-settle { from { translate: 0 15px; scale: .82; opacity: .25; } 72% { translate: 0 -3px; scale: 1.05; opacity: 1; } to { translate: 0 0; scale: 1; opacity: 1; } }
 @keyframes papaya-point-arrive { from { scale: .25; opacity: 0; } 60% { scale: 1.8; opacity: 1; } to { scale: 1; opacity: .85; } }
 @media (min-width: 1024px) { .papaya-network-stage { inset-block-start: 68px; } }
