@@ -392,6 +392,22 @@ export default function App() {
       if (exists && (pluginId === "goals" || pluginId === "papayaGoals")) {
         setActiveWidgets((w) => ({ ...w, goalsWidget: false }));
       }
+      if (exists) {
+        const widgetByPlugin: Record<string, keyof ActiveWidgetsConfig> = {
+          webBrowser: "webBrowser",
+          claudeCode: "claudeCode",
+          gmailInbox: "gmailInbox",
+          socialUpload: "socialUpload",
+          miniTrades: "miniTrades",
+          weatherWidget: "weatherWidget",
+        };
+        const widgetKey = widgetByPlugin[pluginId];
+        if (widgetKey) setActiveWidgets((w) => ({ ...w, [widgetKey]: false }));
+        if (pluginId === "jarvisTerminal") setJarvisTerminalOpen(false);
+        if (pluginId === "veoStudio") setVeoStudioOpen(false);
+        if (pluginId === "osirisIntel" || pluginId === "cctvSurveillance") setOsirisIntelToolOpen(false);
+        if (pluginId === "papayaFlow" || pluginId === "agentFunctions") setAppToolManagerOpen(false);
+      }
       return next;
     });
   };
@@ -938,6 +954,59 @@ export default function App() {
   const handleOpenVeoStudio = (initialImg?: string) => {
     setVeoStudioInitialImage(initialImg || selectedImage || null);
     setVeoStudioOpen(true);
+  };
+
+  const handleOpenStorePlugin = (pluginId: string) => {
+    if (pluginId === "papayaFlow" || pluginId === "agentFunctions" || pluginId === "gemini") {
+      setActiveWidgets((prev) => ({ ...prev, appStore: false }));
+      const tab = pluginId === "papayaFlow" ? "workflows" : pluginId === "agentFunctions" ? "agentMatrix" : "apps";
+      handleOpenAppToolManager(currentAgent.id, tab);
+      return;
+    }
+
+    if (pluginId === "layout") {
+      setActiveWidgets((prev) => ({ ...prev, appStore: false }));
+      setCoreCustomizerOpen(true);
+      return;
+    }
+
+    const widgetByPlugin: Record<string, keyof ActiveWidgetsConfig> = {
+      calendar: "calendarWidget",
+      maps: "googleMaps",
+      goals: "goalsWidget",
+      webBrowser: "webBrowser",
+      claudeCode: "claudeCode",
+      gmailInbox: "gmailInbox",
+      socialUpload: "socialUpload",
+      miniTrades: "miniTrades",
+      weatherWidget: "weatherWidget",
+    };
+    const widgetKey = widgetByPlugin[pluginId];
+    if (widgetKey) {
+      setActiveWidgets((prev) => ({ ...prev, appStore: false, [widgetKey]: true }));
+      return;
+    }
+    if (pluginId === "jarvisTerminal") {
+      setActiveWidgets((prev) => ({ ...prev, appStore: false }));
+      setJarvisTerminalOpen(true);
+      return;
+    }
+    if (pluginId === "veoStudio") {
+      setActiveWidgets((prev) => ({ ...prev, appStore: false }));
+      handleOpenVeoStudio();
+      return;
+    }
+    if (pluginId === "osirisIntel") {
+      setOsirisInitialTab("RADAR");
+      setOsirisIntelToolOpen(true);
+      setActiveWidgets((prev) => ({ ...prev, appStore: false }));
+      return;
+    }
+    if (pluginId === "cctvSurveillance") {
+      setOsirisInitialTab("CCTV");
+      setOsirisIntelToolOpen(true);
+      setActiveWidgets((prev) => ({ ...prev, appStore: false }));
+    }
   };
 
   // --- SCREEN PERCEPTION & AUTONOMOUS WEB ACTION STATES ---
@@ -4857,21 +4926,7 @@ export default function App() {
             lang={lang}
             installedPluginIds={installedPluginIds}
             onToggleInstall={handleToggleInstallPlugin}
-            onOpenPlugin={(id) => {
-              if (id === "papayaFlow") {
-                handleToggleWidget("appStore");
-                handleOpenAppToolManager(currentAgent.id, "workflows");
-              } else if (id === "layout") {
-                setCoreCustomizerOpen(true);
-                handleToggleWidget("appStore");
-              } else if (id === "calendar") {
-                setActiveWidgets((w) => ({ ...w, calendarWidget: true }));
-                handleToggleWidget("appStore");
-              } else if (id === "maps" || id === "googleMaps") {
-                setActiveWidgets((w) => ({ ...w, googleMaps: true }));
-                handleToggleWidget("appStore");
-              }
-            }}
+            onOpenPlugin={handleOpenStorePlugin}
           />
         )}
 
@@ -5152,24 +5207,7 @@ export default function App() {
           lang={lang}
           installedPluginIds={installedPluginIds}
           onToggleInstall={handleToggleInstallPlugin}
-          onOpenPlugin={(id) => {
-            if (id === "papayaFlow") {
-              handleToggleWidget("appStore");
-              handleOpenAppToolManager(currentAgent.id, "workflows");
-            } else if (id === "layout") {
-              setCoreCustomizerOpen(true);
-              handleToggleWidget("appStore");
-            } else if (id === "calendar") {
-              setActiveWidgets((w) => ({ ...w, calendarWidget: true }));
-              handleToggleWidget("appStore");
-            } else if (id === "maps" || id === "googleMaps") {
-              setActiveWidgets((w) => ({ ...w, googleMaps: true }));
-              handleToggleWidget("appStore");
-            } else if (id === "goals" || id === "papayaGoals") {
-              setActiveWidgets((w) => ({ ...w, goalsWidget: true }));
-              handleToggleWidget("appStore");
-            }
-          }}
+          onOpenPlugin={handleOpenStorePlugin}
         />
       )}
 

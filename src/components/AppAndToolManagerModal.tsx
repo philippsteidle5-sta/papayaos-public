@@ -1,29 +1,21 @@
 // src/components/AppAndToolManagerModal.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Search,
-  Sparkles,
   Layers,
   Check,
   ExternalLink,
   Bot,
-  SlidersHorizontal,
   RefreshCw,
   Power,
-  Shield,
-  Zap,
-  MessageSquare,
   Workflow,
-  Brain,
   Save,
-  ShieldCheck,
-  ArrowRight,
 } from "lucide-react";
+import { AgentWorkflowEditor } from "./AgentWorkflowEditor";
 import { AgentConfig } from "../types";
 import {
   SYSTEM_APPS_CATALOG,
-  SystemAppDefinition,
   AgentWorkflowSettings,
   getAgentWorkflowSettings,
   getAppToAgentLinkMap,
@@ -31,6 +23,14 @@ import {
   saveAgentWorkflowSettings,
   setAppLink,
 } from "../utils/agentAppLinksStore";
+import {
+  AgentWorkflowGraph,
+  getAgentWorkflowGraph,
+  getWorkflowAppIds,
+  reconcileWorkflowGraphApps,
+  resetAgentWorkflowGraph,
+  saveAgentWorkflowGraph,
+} from "../utils/agentWorkflowGraph";
 import { useTheme } from "../utils/themeStore";
 
 interface AppAndToolManagerModalProps {
@@ -76,6 +76,9 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [linkMap, setLinkMap] = useState<Record<string, string>>(() => getAppToAgentLinkMap());
   const [workflowDraft, setWorkflowDraft] = useState<AgentWorkflowSettings>(() => getAgentWorkflowSettings(fallbackInitialAgentId));
+  const [workflowGraphDraft, setWorkflowGraphDraft] = useState<AgentWorkflowGraph>(() =>
+    getAgentWorkflowGraph(fallbackInitialAgentId, getAgentWorkflowSettings(fallbackInitialAgentId).enabledAppIds, SYSTEM_APPS_CATALOG.map((app) => app.id))
+  );
 
   // Keep linkMap updated
   useEffect(() => {
@@ -92,7 +95,9 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
   }, [selectedAgentId]);
 
   useEffect(() => {
-    setWorkflowDraft(getAgentWorkflowSettings(selectedAgentId));
+    const settings = getAgentWorkflowSettings(selectedAgentId);
+    setWorkflowDraft(settings);
+    setWorkflowGraphDraft(getAgentWorkflowGraph(selectedAgentId, settings.enabledAppIds, SYSTEM_APPS_CATALOG.map((app) => app.id)));
   }, [selectedAgentId]);
 
   // Update selected agent if initial prop changes
@@ -145,7 +150,12 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
         : [...workflowDraft.enabledAppIds, appId],
     };
     setWorkflowDraft(next);
-    if (activeTab === "agentMatrix") saveAgentWorkflowSettings(selectedAgentId, next);
+    if (activeTab === "agentMatrix") {
+      saveAgentWorkflowSettings(selectedAgentId, next);
+      const graph = reconcileWorkflowGraphApps(workflowGraphDraft, next.enabledAppIds);
+      setWorkflowGraphDraft(graph);
+      saveAgentWorkflowGraph(selectedAgentId, graph, SYSTEM_APPS_CATALOG.map((app) => app.id));
+    }
   };
 
   const handleResetToDefaults = () => {
@@ -156,9 +166,25 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
   };
 
   const handleSaveWorkflow = () => {
-    saveAgentWorkflowSettings(selectedAgentId, workflowDraft);
+    const nextSettings = activeTab === "workflows"
+      ? { ...workflowDraft, enabledAppIds: getWorkflowAppIds(workflowGraphDraft) }
+      : workflowDraft;
+    saveAgentWorkflowSettings(selectedAgentId, nextSettings);
+    if (activeTab === "workflows") {
+      saveAgentWorkflowGraph(selectedAgentId, workflowGraphDraft, SYSTEM_APPS_CATALOG.map((app) => app.id));
+    }
     setWorkflowDraft(getAgentWorkflowSettings(selectedAgentId));
     setLinkMap(getAppToAgentLinkMap());
+  };
+
+  const handleChangeTab = (nextTab: "apps" | "agentMatrix" | "workflows") => {
+    if (activeTab === "workflows" && nextTab !== "workflows") handleSaveWorkflow();
+    setActiveTab(nextTab);
+  };
+
+  const handleClose = () => {
+    if (activeTab === "workflows") handleSaveWorkflow();
+    onClose();
   };
 
   const handleSelectAgent = (agentId: string) => {
@@ -167,16 +193,10 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
   };
 
   const handleResetSelectedWorkflow = () => {
-    setWorkflowDraft(resetAgentWorkflowSettings(selectedAgentId));
-  };
-
-  const handleToggleWorkflowApp = (appId: string) => {
-    setWorkflowDraft((current) => ({
-      ...current,
-      enabledAppIds: current.enabledAppIds.includes(appId)
-        ? current.enabledAppIds.filter((id) => id !== appId)
-        : [...current.enabledAppIds, appId],
-    }));
+    const settings = resetAgentWorkflowSettings(selectedAgentId);
+    resetAgentWorkflowGraph(selectedAgentId);
+    setWorkflowDraft(settings);
+    setWorkflowGraphDraft(getAgentWorkflowGraph(selectedAgentId, settings.enabledAppIds, SYSTEM_APPS_CATALOG.map((app) => app.id)));
   };
 
   const activeAgentConfig =
@@ -192,12 +212,11 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
       systemPrompt: "",
     };
   const workflowApps = SYSTEM_APPS_CATALOG.filter((app) => !app.adminOnly || isAdmin);
-  const visibleEnabledAppCount = workflowDraft.enabledAppIds.filter((id) => workflowApps.some((app) => app.id === id)).length;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-xl animate-fade-in font-sans">
       <div
-        className={`relative w-full max-w-5xl h-[88vh] max-h-[820px] rounded-2xl flex flex-col overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.85)] border transition-all ${
+        className={`relative w-full ${activeTab === "workflows" ? "max-w-[1320px] h-[92vh] max-h-[960px]" : "max-w-5xl h-[88vh] max-h-[820px]"} rounded-2xl flex flex-col overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.85)] border transition-all ${
           isModern
             ? "bg-[#0c0c11] border-zinc-800 text-zinc-100 shadow-[0_0_50px_rgba(168,85,247,0.12)]"
             : "bg-slate-950 border-cyan-500/40 text-slate-100 shadow-[0_0_50px_rgba(0,240,255,0.2)]"
@@ -222,7 +241,9 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black tracking-wide font-mono">
-                  {isEn ? "SYSTEM APPS & AGENT ORCHESTRATION" : "APPS & AGENTEN-VERKNÜPFUNG"}
+                  {activeTab === "workflows"
+                    ? (isEn ? "AGENT WORKFLOW EDITOR" : "AGENTEN-WORKFLOW-EDITOR")
+                    : (isEn ? "SYSTEM APPS & AGENT ORCHESTRATION" : "APPS & AGENTEN-VERKNÜPFUNG")}
                 </h2>
                 <span
                   className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
@@ -235,9 +256,11 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                {isEn
-                  ? "Toggle workspace apps and link them directly to agents (e.g. Browser to N.E.O.)"
-                  : "Wähle aktive Funktionen aus und verknüpfe sie mit deinen Agenten (z. B. Web Browser mit N.E.O.)"}
+                {activeTab === "workflows"
+                  ? (isEn ? "Build and inspect a separate node flow for each agent." : "Baue und prüfe einen eigenen Node-Ablauf für jeden Agenten.")
+                  : (isEn
+                    ? "Toggle workspace apps and link them directly to agents (e.g. Browser to N.E.O.)"
+                    : "Wähle aktive Funktionen aus und verknüpfe sie mit deinen Agenten (z. B. Web Browser mit N.E.O.)")}
               </p>
             </div>
           </div>
@@ -250,7 +273,7 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
               }`}
             >
               <button
-                onClick={() => setActiveTab("apps")}
+                onClick={() => handleChangeTab("apps")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition flex items-center gap-1.5 ${
                   activeTab === "apps"
                     ? isModern
@@ -263,7 +286,7 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
                 <span>{isEn ? "All Apps" : "Alle Apps"}</span>
               </button>
               <button
-                onClick={() => setActiveTab("agentMatrix")}
+                onClick={() => handleChangeTab("agentMatrix")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition flex items-center gap-1.5 ${
                   activeTab === "agentMatrix"
                     ? isModern
@@ -276,7 +299,7 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
                 <span>{isEn ? "Agent Matrix" : "Agenten-Zuweisung"}</span>
               </button>
               <button
-                onClick={() => setActiveTab("workflows")}
+                onClick={() => handleChangeTab("workflows")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition flex items-center gap-1.5 ${
                   activeTab === "workflows"
                     ? isModern
@@ -291,7 +314,7 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition"
               title="Schließen"
             >
@@ -661,113 +684,17 @@ export const AppAndToolManagerModal: React.FC<AppAndToolManagerModalProps> = ({
         )}
 
         {activeTab === "workflows" && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-            <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-4 sm:gap-5">
-              <aside className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3">
-                <div className="px-2 pb-2 text-[10px] font-mono font-bold uppercase tracking-[.16em] text-slate-500">
-                  {isEn ? "Choose an agent" : "Agent auswählen"}
-                </div>
-                <div className="space-y-2">
-                  {agents.map((ag) => {
-                    const selected = ag.id === selectedAgentId;
-                    return (
-                      <button
-                        key={ag.id}
-                        type="button"
-                        onClick={() => handleSelectAgent(ag.id)}
-                        className={`w-full rounded-xl border px-3 py-2.5 flex items-center gap-3 text-left transition ${selected ? "bg-white/[.07] border-white/20" : "bg-black/10 border-white/[.06] hover:border-white/15"}`}
-                        style={{ borderColor: selected ? `${ag.color}90` : undefined }}
-                      >
-                        <span className="w-9 h-9 rounded-xl grid place-items-center font-mono font-black" style={{ color: ag.color, background: `${ag.color}20`, border: `1px solid ${ag.color}45` }}>{ag.railLetter}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-bold text-white">{ag.name}</span>
-                          <span className="block truncate text-[10px] text-slate-500">{ag.tag}</span>
-                        </span>
-                        {selected && <Check className="w-4 h-4" style={{ color: ag.color }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-4 px-2 text-[10px] leading-relaxed text-slate-500">
-                  {isEn ? "A function can be enabled for more than one agent." : "Dieselbe Funktion kann bei mehreren Agenten aktiv sein."}
-                </p>
-              </aside>
-
-              <div className="min-w-0 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900 to-[#111016] p-4 sm:p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] font-mono uppercase tracking-[.18em] text-orange-300">{isEn ? "Agent workflow" : "Agenten-Ablauf"}</div>
-                      <h3 className="mt-1 text-lg font-bold text-white">{activeAgentConfig.name}</h3>
-                      <p className="mt-1 text-xs text-slate-400">{isEn ? "Choose what this agent can use and how it should work." : "Lege fest, welche Funktionen dieser Agent nutzen soll und wie er arbeitet."}</p>
-                    </div>
-                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[10px] font-mono text-slate-400">{visibleEnabledAppCount} {isEn ? "functions" : "Funktionen"}</span>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    {[
-                      { icon: <MessageSquare className="w-4 h-4" />, title: isEn ? "Your message" : "Deine Anfrage" },
-                      { icon: <Brain className="w-4 h-4" />, title: workflowDraft.useMemory ? "Memory" : (isEn ? "No memory" : "Ohne Memory") },
-                      { icon: <Bot className="w-4 h-4" />, title: activeAgentConfig.short },
-                      { icon: <Zap className="w-4 h-4" />, title: isEn ? `${visibleEnabledAppCount} functions` : `${visibleEnabledAppCount} Funktionen` },
-                    ].map((step, index) => (
-                      <React.Fragment key={step.title}>
-                        {index > 0 && <ArrowRight className="w-3.5 h-3.5 text-slate-600 hidden sm:block" />}
-                        <div className="min-w-[112px] flex-1 rounded-xl border border-white/[.08] bg-black/25 px-3 py-2.5 flex items-center gap-2.5 text-xs text-slate-200">
-                          <span style={{ color: activeAgentConfig.color }}>{step.icon}</span>{step.title}
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  <label className="rounded-xl border border-white/[.08] bg-zinc-900/50 p-4 flex items-center justify-between gap-4 cursor-pointer">
-                    <span className="flex items-start gap-3">
-                      <Brain className="mt-0.5 w-4 h-4 text-orange-300" />
-                      <span><span className="block text-xs font-bold text-white">{isEn ? "Use shared memory" : "Geteiltes Memory verwenden"}</span><span className="mt-1 block text-[10px] leading-relaxed text-slate-500">{isEn ? "This agent can use saved facts and preferences." : "Dieser Agent erhält gespeicherte Fakten und Vorlieben im Chat."}</span></span>
-                    </span>
-                    <input type="checkbox" checked={workflowDraft.useMemory} onChange={(e) => setWorkflowDraft((current) => ({ ...current, useMemory: e.target.checked }))} className="accent-orange-400 size-4 shrink-0" />
-                  </label>
-                  <label className="rounded-xl border border-white/[.08] bg-zinc-900/50 p-4 flex items-center justify-between gap-4 cursor-pointer">
-                    <span className="flex items-start gap-3">
-                      <ShieldCheck className="mt-0.5 w-4 h-4 text-emerald-300" />
-                      <span><span className="block text-xs font-bold text-white">{isEn ? "Ask before consequential actions" : "Vor wichtigen Aktionen nachfragen"}</span><span className="mt-1 block text-[10px] leading-relaxed text-slate-500">{isEn ? "Adds a confirmation instruction to the agent context." : "Gibt dem Agenten die Anweisung, vor folgenreichen Aktionen nachzufragen."}</span></span>
-                    </span>
-                    <input type="checkbox" checked={workflowDraft.requireActionApproval} onChange={(e) => setWorkflowDraft((current) => ({ ...current, requireActionApproval: e.target.checked }))} className="accent-emerald-400 size-4 shrink-0" />
-                  </label>
-                </div>
-
-                <section className="rounded-2xl border border-white/[.08] bg-zinc-900/35 p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div><h4 className="text-sm font-bold text-white">{isEn ? "Functions for this agent" : "Funktionen für diesen Agenten"}</h4><p className="mt-1 text-[10px] text-slate-500">{isEn ? "Select multiple functions; other agents keep their own setup." : "Wähle mehrere Funktionen. Die Einstellungen anderer Agenten bleiben separat."}</p></div>
-                    <SlidersHorizontal className="w-4 h-4 text-slate-500" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {workflowApps.map((app) => {
-                      const enabled = workflowDraft.enabledAppIds.includes(app.id);
-                      return (
-                        <button key={app.id} type="button" onClick={() => handleToggleWorkflowApp(app.id)} className={`rounded-xl border p-3 flex items-start gap-3 text-left transition ${enabled ? "border-orange-400/45 bg-orange-400/[.08]" : "border-white/[.07] bg-black/15 hover:border-white/20"}`}>
-                          <span className="text-lg leading-none">{app.icon}</span>
-                          <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-slate-100">{isEn ? app.nameEn : app.nameDe}</span><span className="mt-1 block text-[10px] leading-relaxed text-slate-500">{isEn ? app.descriptionEn : app.descriptionDe}</span></span>
-                          <span className={`mt-0.5 size-4 rounded border grid place-items-center shrink-0 ${enabled ? "border-orange-300 bg-orange-400 text-black" : "border-slate-600"}`}>{enabled && <Check className="w-3 h-3" />}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <label className="block rounded-2xl border border-white/[.08] bg-zinc-900/35 p-4 sm:p-5">
-                  <span className="block text-sm font-bold text-white">{isEn ? "Working instructions" : "Arbeitsanweisung"}</span>
-                  <span className="mt-1 block text-[10px] text-slate-500">{isEn ? "For example: keep answers concise and end plans with one next action." : "Zum Beispiel: knapp antworten und Pläne mit genau einem nächsten Schritt beenden."}</span>
-                  <textarea value={workflowDraft.customInstructions} onChange={(e) => setWorkflowDraft((current) => ({ ...current, customInstructions: e.target.value.slice(0, 2000) }))} maxLength={2000} rows={3} placeholder={isEn ? "Add an instruction for this agent…" : "Eigene Anweisung für diesen Agenten…"} className="mt-3 w-full resize-y rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-xs leading-relaxed text-slate-100 placeholder:text-slate-600 focus:border-orange-400/50 focus:outline-none" />
-                  <span className="mt-1 block text-right text-[10px] font-mono text-slate-600">{workflowDraft.customInstructions.length}/2000</span>
-                </label>
-
-                <p className="px-1 text-[10px] leading-relaxed text-slate-500">{isEn ? "Saved in this browser. Switching agents saves the current setup. These settings shape the agent prompt; they do not connect external services by themselves." : "Wird in diesem Browser gespeichert. Beim Wechsel des Agenten werden die Änderungen gesichert. Die Einstellungen steuern den Agenten-Kontext, verbinden aber keine externen Dienste."}</p>
-              </div>
-            </div>
-          </div>
+          <AgentWorkflowEditor
+            agents={agents}
+            selectedAgentId={selectedAgentId}
+            onSelectAgent={handleSelectAgent}
+            graph={workflowGraphDraft}
+            onGraphChange={setWorkflowGraphDraft}
+            settings={workflowDraft}
+            onSettingsChange={setWorkflowDraft}
+            apps={workflowApps}
+            isEn={isEn}
+          />
         )}
 
         {/* BOTTOM FOOTER */}

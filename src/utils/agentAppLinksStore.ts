@@ -1,5 +1,6 @@
 // src/utils/agentAppLinksStore.ts
 // Robust, persistent store to link apps & system functions to AI agents (e.g. WebBrowser -> NEO, ClaudeCode -> SYNTAX)
+import { getSavedAgentWorkflowGraph, getWorkflowPlan } from "./agentWorkflowGraph";
 
 export interface SystemAppDefinition {
   id: string;
@@ -314,6 +315,7 @@ export function getAppIdsLinkedToAgent(agentId: string, isAdmin = false): string
 export function getLinkedAppsContextForPrompt(agentId: string, isAdmin = false): string {
   const linked = getAppsLinkedToAgent(agentId, isAdmin);
   const settings = getAgentWorkflowSettings(agentId);
+  const savedGraph = getSavedAgentWorkflowGraph(agentId, SYSTEM_APPS_CATALOG.map((app) => app.id));
   if (linked.length === 0 && !settings.customInstructions.trim()) return "";
   const names = linked.map((a) => `${a.nameDe} (${a.shortName})`).join(", ");
   const parts = [
@@ -328,6 +330,17 @@ export function getLinkedAppsContextForPrompt(agentId: string, isAdmin = false):
       ? "Frage den Nutzer vor externen, folgenreichen oder nicht rückgängig zu machenden Aktionen um Bestätigung."
       : "Der Nutzer hat für diesen Agenten die zusätzliche Bestätigungsaufforderung deaktiviert.",
   ];
+  if (savedGraph) {
+    const plan = getWorkflowPlan(savedGraph);
+    const allowedIds = new Set(linked.map((app) => app.id));
+    const orderedNames = plan.orderedAppIds
+      .filter((id) => allowedIds.has(id))
+      .map((id) => SYSTEM_APPS_CATALOG.find((app) => app.id === id)?.nameDe)
+      .filter((name): name is string => Boolean(name));
+    if (plan.agentConnected && !plan.hasCycle && orderedNames.length) {
+      parts.push("Bevorzugte Reihenfolge, sofern die Funktionen verfügbar sind: " + orderedNames.join(" → ") + ". Der gespeicherte Graph ist eine Planung, keine automatische Ausführung.");
+    }
+  }
   if (settings.customInstructions.trim()) {
     parts.push("Zusätzliche Arbeitsweise dieses Agenten: " + settings.customInstructions.trim());
   }

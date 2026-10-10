@@ -11,6 +11,15 @@ import {
   MapPin,
   Target,
   Workflow,
+  Globe,
+  Terminal,
+  Video,
+  Mail,
+  Share2,
+  BarChart3,
+  Cloud,
+  Radar,
+  Users,
   Trash2,
   Loader2,
   Check,
@@ -81,9 +90,21 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
 }) => {
   const isEn = lang === "en";
 
-  // Official curated catalog: Google Gemini AI + Layout App + Chronos Kalender
+  // Official curated catalog
   const basePlugins: PluginItem[] = useMemo(() => {
     return [
+      {
+        id: "papayaFlow",
+        name: isEn ? "Agent Workflow Editor" : "Agenten-Workflow-Editor",
+        category: isEn ? "Agents & workflows" : "Agenten & Abläufe",
+        description: isEn
+          ? "Build agent flows with draggable nodes and connections. Choose functions, inspect the planned order and save a separate graph for each agent."
+          : "Baue Abläufe mit verschiebbaren Nodes und Verbindungen. Wähle Funktionen, prüfe die geplante Reihenfolge und speichere einen Graphen pro Agent.",
+        version: isEn ? "v1.1 Preview" : "v1.1 Vorschau",
+        installed: installedPluginIds.includes("papayaFlow"),
+        modelInfo: "PapayaOS Native",
+        contextWindow: isEn ? "Saved in this browser" : "In diesem Browser gespeichert",
+      },
       {
         id: "gemini",
         name: "Google Gemini AI",
@@ -145,19 +166,162 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
         contextWindow: "Complete Goal Sync",
       },
       {
-        id: "papayaFlow",
-        name: "Papaya Flow Studio",
+        id: "webBrowser",
+        name: isEn ? "Quantum Web Browser" : "Quantum Webbrowser",
+        category: isEn ? "Research & browsing" : "Recherche & Browser",
+        description: isEn
+          ? "Open the built-in browser, inspect pages and use the existing page-analysis tools."
+          : "Öffnet den integrierten Browser für Recherche, Seitenansicht und die vorhandenen Analysefunktionen.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("webBrowser"),
+        modelInfo: "PapayaOS Browser",
+        contextWindow: isEn ? "Workspace tool" : "Workspace-Funktion",
+      },
+      {
+        id: "claudeCode",
+        name: isEn ? "Claude Code Terminal" : "Claude-Code-Terminal",
+        category: isEn ? "Development" : "Entwicklung",
+        description: isEn
+          ? "Launch the integrated code and terminal workspace."
+          : "Öffnet den integrierten Code- und Terminal-Arbeitsbereich.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("claudeCode"),
+        modelInfo: "PapayaOS Development Tools",
+        contextWindow: isEn ? "Workspace tool" : "Workspace-Funktion",
+      },
+      {
+        id: "jarvisTerminal",
+        name: isEn ? "Jarvis Terminal Console" : "Jarvis-Terminal-Konsole",
+        category: isEn ? "System & diagnostics" : "System & Diagnose",
+        description: isEn
+          ? "Open the existing system terminal and diagnostics console."
+          : "Öffnet die vorhandene System-Terminal- und Diagnosekonsole.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("jarvisTerminal"),
+        modelInfo: "PapayaOS System Tools",
+        contextWindow: isEn ? "Workspace tool" : "Workspace-Funktion",
+      },
+      {
+        id: "gmailInbox",
+        name: isEn ? "Gmail Inbox & AI Mail" : "Gmail-Posteingang & KI-Mail",
+        category: isEn ? "Communication" : "Kommunikation",
+        description: isEn
+          ? "Open the Gmail workspace already included in PapayaOS. Account connection may be required."
+          : "Öffnet den vorhandenen Gmail-Arbeitsbereich. Eine Kontoverknüpfung kann erforderlich sein.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("gmailInbox"),
+        modelInfo: "Gmail Workspace",
+        contextWindow: isEn ? "Account connection required" : "Kontoverknüpfung erforderlich",
+      },
+      {
+        id: "socialUpload",
+        name: isEn ? "Social Media Studio" : "Social-Media-Studio",
+        category: isEn ? "Content & publishing" : "Inhalte & Veröffentlichung",
+        description: isEn
+          ? "Open the built-in social publishing workspace for its currently supported platforms."
+          : "Öffnet den integrierten Social-Publishing-Arbeitsbereich für die aktuell unterstützten Plattformen.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("socialUpload"),
+        modelInfo: "PapayaOS Social Studio",
+        contextWindow: isEn ? "Platform support varies" : "Plattform-Unterstützung variiert",
+      },
+      {
+        id: "miniTrades",
+        name: isEn ? "Mini Quant Market Radar" : "Mini-Quant-Markt-Radar",
+        category: isEn ? "Markets" : "Märkte",
+        description: isEn
+          ? "Open the existing market overview. This does not place trades automatically."
+          : "Öffnet die vorhandene Marktübersicht. Das Plugin führt keine Trades automatisch aus.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("miniTrades"),
+        modelInfo: "PapayaOS Market Tools",
+        contextWindow: isEn ? "Market data availability varies" : "Marktdaten-Verfügbarkeit variiert",
+      },
+      {
+        id: "veoStudio",
+        name: isEn ? "Google Veo Video Studio" : "Google Veo Video-Studio",
+        category: isEn ? "Creation & media" : "Kreation & Medien",
+        description: isEn
+          ? "Open the integrated video studio. Generation depends on configured provider access."
+          : "Öffnet das integrierte Video-Studio. Generierung setzt einen konfigurierten Anbieterzugang voraus.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("veoStudio"),
+        modelInfo: "Veo Studio UI",
+        contextWindow: isEn ? "Provider access may be required" : "Anbieterzugang kann erforderlich sein",
+      },
+      {
+        id: "weatherWidget",
+        name: isEn ? "Location Weather Radar" : "Standort-Wetterradar",
+        category: isEn ? "Daily tools" : "Alltagsfunktionen",
+        description: isEn
+          ? "Show the existing local weather widget in the workspace."
+          : "Zeigt das vorhandene lokale Wetter-Widget im Workspace an.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("weatherWidget"),
+        modelInfo: "PapayaOS Weather Widget",
+        contextWindow: isEn ? "Weather provider dependent" : "Wetteranbieter abhängig",
+      },
+      {
+        id: "osirisIntel",
+        name: isEn ? "OSIRIS Intelligence Radar" : "OSIRIS-Intelligence-Radar",
+        category: isEn ? "Research & security" : "Recherche & Sicherheit",
+        description: isEn
+          ? "Open the existing OSIRIS intelligence workspace and its radar view."
+          : "Öffnet den vorhandenen OSIRIS-Intelligence-Arbeitsbereich mit Radar-Ansicht.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("osirisIntel"),
+        modelInfo: "OSIRIS Workspace",
+        contextWindow: isEn ? "Workspace tool" : "Workspace-Funktion",
+      },
+      {
+        id: "cctvSurveillance",
+        name: isEn ? "OSIRIS Camera Monitor" : "OSIRIS-Kameramonitor",
+        category: isEn ? "Research & security" : "Recherche & Sicherheit",
+        description: isEn
+          ? "Open the CCTV view in the existing OSIRIS workspace."
+          : "Öffnet die Kamera-Ansicht im vorhandenen OSIRIS-Arbeitsbereich.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("cctvSurveillance"),
+        modelInfo: "OSIRIS Workspace",
+        contextWindow: isEn ? "Workspace tool" : "Workspace-Funktion",
+      },
+      {
+        id: "agentFunctions",
+        name: isEn ? "Agent Function Assignment" : "Agenten-Funktionszuweisung",
         category: isEn ? "Agents & workflows" : "Agenten & Abläufe",
         description: isEn
-          ? "Configure each PapayaOS agent: choose its functions, shared memory, approval rules and working instructions. Native PapayaOS feature."
-          : "Konfiguriere pro PapayaOS-Agent Funktionen, gemeinsames Memory, Freigaben und Arbeitsanweisungen. Native PapayaOS-Funktion.",
-        version: isEn ? "v1.0 Preview" : "v1.0 Vorschau",
-        installed: installedPluginIds.includes("papayaFlow"),
-        modelInfo: "PapayaOS Native",
-        contextWindow: isEn ? "Per-agent settings" : "Einstellungen je Agent",
+          ? "Choose which installed apps and functions each agent can use. Assignments stay separate per agent."
+          : "Lege fest, welche installierten Apps und Funktionen jeder Agent nutzen darf. Zuweisungen bleiben pro Agent getrennt.",
+        version: isEn ? "Native" : "Nativ",
+        installed: installedPluginIds.includes("agentFunctions"),
+        modelInfo: "PapayaOS Agent Matrix",
+        contextWindow: isEn ? "Per-agent settings" : "Agenten-spezifische Einstellungen",
       },
     ];
   }, [isEn, installedPluginIds]);
+
+  const renderPluginIcon = (pluginId: string, size: "small" | "large" = "small") => {
+    const className = size === "large" ? "w-6 h-6" : "w-5 h-5";
+    switch (pluginId) {
+      case "papayaFlow": return <Workflow className={`${className} text-orange-300`} />;
+      case "gemini": return <GeminiIconSvg size={size === "large" ? 28 : 22} />;
+      case "calendar": return <Calendar className={`${className} text-purple-400`} />;
+      case "maps": return <MapPin className={`${className} text-emerald-400`} />;
+      case "goals": return <Target className={`${className} text-[#ff7a59]`} />;
+      case "webBrowser": return <Globe className={`${className} text-cyan-300`} />;
+      case "claudeCode": return <Terminal className={`${className} text-violet-300`} />;
+      case "jarvisTerminal": return <Terminal className={`${className} text-amber-300`} />;
+      case "gmailInbox": return <Mail className={`${className} text-red-300`} />;
+      case "socialUpload": return <Share2 className={`${className} text-pink-300`} />;
+      case "miniTrades": return <BarChart3 className={`${className} text-emerald-300`} />;
+      case "veoStudio": return <Video className={`${className} text-fuchsia-300`} />;
+      case "weatherWidget": return <Cloud className={`${className} text-sky-300`} />;
+      case "osirisIntel": return <Radar className={`${className} text-cyan-300`} />;
+      case "cctvSurveillance": return <Radar className={`${className} text-rose-300`} />;
+      case "agentFunctions": return <Users className={`${className} text-orange-300`} />;
+      default: return <LayoutGrid className={`${className} text-[#ff8a3d]`} />;
+    }
+  };
 
   const [plugins, setPlugins] = useState<PluginItem[]>(basePlugins);
 
@@ -517,7 +681,7 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
                   <article
                     key={plugin.id}
                     onClick={() => setActivePluginModal(plugin)}
-                    className={`bg-[#17151a] border border-[#2a262e] hover:border-[#ff8a3d]/40 rounded-[14px] p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] group ${
+                    className={`bg-[#17151a] border ${plugin.id === "papayaFlow" ? "border-[#ff8a3d]/55 bg-gradient-to-br from-[#241914] to-[#17151a]" : "border-[#2a262e]"} hover:border-[#ff8a3d]/40 rounded-[14px] p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] group ${
                       viewMode === "list"
                         ? "sm:flex-row sm:items-center sm:gap-4"
                         : "min-h-[195px]"
@@ -535,17 +699,7 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
                           className="w-10 h-10 rounded-[11px] bg-[#0c0a0e] border border-[#2a262e] flex items-center justify-center flex-none group-hover:border-[#ff8a3d]/30 transition"
                           aria-hidden="true"
                         >
-                          {plugin.id === "gemini" ? (
-                            <GeminiIconSvg size={22} />
-                          ) : plugin.id === "calendar" ? (
-                            <Calendar className="w-5 h-5 text-purple-400" />
-                          ) : plugin.id === "maps" ? (
-                            <MapPin className="w-5 h-5 text-emerald-400" />
-                          ) : plugin.id === "goals" ? (
-                            <Target className="w-5 h-5 text-[#ff7a59]" />
-                          ) : (
-                            <LayoutGrid className="w-5 h-5 text-[#ff8a3d]" />
-                          )}
+                          {renderPluginIcon(plugin.id)}
                         </div>
 
                         <div className="min-w-0 flex-1">
@@ -674,19 +828,7 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
             <div className="flex items-center justify-between pb-4 border-b border-[#2a262e] mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-[12px] bg-[#0a090c] border border-[#2a262e] flex items-center justify-center">
-                  {activePluginModal.id === "gemini" ? (
-                    <GeminiIconSvg size={28} />
-                  ) : activePluginModal.id === "calendar" ? (
-                    <Calendar className="w-6 h-6 text-purple-400" />
-                  ) : activePluginModal.id === "maps" ? (
-                    <MapPin className="w-6 h-6 text-emerald-400" />
-                  ) : activePluginModal.id === "goals" ? (
-                    <Target className="w-6 h-6 text-[#ff7a59]" />
-                  ) : activePluginModal.id === "papayaFlow" ? (
-                    <Workflow className="w-6 h-6 text-orange-300" />
-                  ) : (
-                    <LayoutGrid className="w-6 h-6 text-[#ff8a3d]" />
-                  )}
+                  {renderPluginIcon(activePluginModal.id, "large")}
                 </div>
                 <div>
                   <h3 className="text-[16px] font-bold m-0 text-[#f4f0ea]">
@@ -758,7 +900,6 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
                       const target = activePluginModal;
                       setActivePluginModal(null);
                       handleOpenPluginClick(target);
-                      if (onClose) onClose();
                     }}
                     className="px-5 py-2 rounded-[9px] bg-[#ff8a3d] hover:bg-[#ff9a54] text-[#1b1006] text-[13px] font-medium cursor-pointer transition"
                   >
