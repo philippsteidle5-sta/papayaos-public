@@ -40,6 +40,7 @@ export interface PluginItem {
 }
 
 interface AppStoreWidgetProps {
+  docked?: boolean;
   isEditMode?: boolean;
   onClose?: () => void;
   lang?: Language;
@@ -82,6 +83,7 @@ const GeminiIconSvg: React.FC<{ size?: number }> = ({ size = 24 }) => (
 );
 
 export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
+  docked = false,
   onClose,
   lang = "de",
   installedPluginIds = ["gemini"],
@@ -491,9 +493,9 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
   return (
     <div
       role="dialog"
-      aria-modal="true"
+      aria-modal={!docked}
       aria-label="Papaya Plugin Store"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fade-in select-none"
+      className={docked ? "studio-store-dock" : "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fade-in select-none"}
       onClick={(e) => {
         if (e.target === e.currentTarget && onClose) {
           onClose();
@@ -939,5 +941,3 @@ export const AppStoreWidget: React.FC<AppStoreWidgetProps> = ({
     </div>
   );
 };
-
-

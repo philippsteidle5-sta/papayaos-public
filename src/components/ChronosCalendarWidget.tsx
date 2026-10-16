@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Language } from "../utils/translations";
 
 interface ChronosCalendarWidgetProps {
+  docked?: boolean;
   agentColor?: string;
   compact?: boolean;
   standalone?: boolean;
@@ -37,6 +38,7 @@ const MONTHS = [
 ];
 
 export const ChronosCalendarWidget: React.FC<ChronosCalendarWidgetProps> = ({
+  docked = false,
   agentColor = "#6d6cf5",
   compact = false,
   standalone = true,
@@ -1107,14 +1109,14 @@ export const ChronosCalendarWidget: React.FC<ChronosCalendarWidgetProps> = ({
   // Floating pristine card directly on screen without outer bulky wrapper
   return (
     <div
-      style={{
+      style={docked ? undefined : {
         position: "fixed",
         zIndex: 50,
         left: position ? `${position.x}px` : "50%",
         top: position ? `${position.y}px` : "72px",
         transform: position ? "none" : "translateX(-50%)",
       }}
-      className="pointer-events-auto select-none transition-[transform] duration-75"
+      className={docked ? "studio-calendar-dock" : "pointer-events-auto select-none transition-[transform] duration-75"}
     >
       {calendarCard}
     </div>

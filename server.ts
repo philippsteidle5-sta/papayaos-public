@@ -4908,7 +4908,7 @@ User prompt: "${finalPrompt}"`,
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, process.env.HOST || "0.0.0.0", () => {
     console.log(`Syntax OS server running on http://localhost:${PORT}`);
   });
 }

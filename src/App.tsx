@@ -145,12 +145,12 @@ const AGENTS: AgentConfig[] = [
   {
     id: "syntax",
     name: "PAPAYA",
-    tag: "PAPAYA OS // SOVEREIGN MASTER ARCHITECT",
+    tag: "Wissen & Ideen",
     short: "PAPAYA",
     railLetter: "P",
-    color: "#ff6b35",
-    badgeColor: "#ff6b35",
-    greeting: "PapayaOS Sovereign Core online! Willkommen im Papaya Intelligence Workspace. Alle 8 spezialisierten Cores sind synchronisiert, Philipp. Fullstack-Architektur, Social Media Automatisierung, Veo 3.1 Studio und direkter ElevenLabs-Voice-Nexus stehen bereit. Was packen wir heute an?",
+    color: "#ff9b38",
+    badgeColor: "#ff9b38",
+    greeting: "Ich bin PAPAYA. Lass uns recherchieren, schreiben oder deine nächste Idee weiterdenken.",
     shape: "sphere",
   },
   {
@@ -188,24 +188,24 @@ const AGENTS: AgentConfig[] = [
   },
   {
     id: "pulse",
-    name: "P.U.L.S.E.",
-    tag: "SOCIAL MEDIA MARKETING MASCHINE // VIRAL HYPER-GROWTH",
-    short: "PULSE",
-    railLetter: "P",
-    color: "#a855f7",
-    badgeColor: "#a855f7",
-    greeting: "P.U.L.S.E. am Start, Mr – Ihre ultimative Social Media Marketing Maschine! Ob virale 3s-Hooks, Shot-by-Shot TikTok/Reels-Skripte mit Regieanweisungen, Veo 3.1 & Frameloop Video-Prompts oder hochkonvertierende Paid Ads: Ich liefere Ihnen für alles genaue, sofort umsetzbare Anweisungen. Welchen Content bringen wir heute viral?",
+    name: "MANGO",
+    tag: "Kommunikation",
+    short: "MANGO",
+    railLetter: "M",
+    color: "#ffc93c",
+    badgeColor: "#ffc93c",
+    greeting: "Ich bin MANGO. Lass uns die richtigen Worte für deine Nachrichten und deinen Content finden.",
     shape: "network",
   },
   {
     id: "chronos",
-    name: "C.H.R.O.N.O.S.",
-    tag: "TEMPORAL MATRIX // SPRINT & PRODUCTIVITY CORE",
-    short: "CHRONOS",
-    railLetter: "C",
-    color: "#eab308",
-    badgeColor: "#eab308",
-    greeting: "Hier ist C.H.R.O.N.O.S., Ihr Zeit- & Sprint-Meister. Mr, Leerlauf ist ab sofort verboten. Mit radikalem Timeboxing und Deep-Work-Fokus komprimieren wir 7 Arbeitstage in 24 Stunden. Welchen Meilenstein reißen wir zuerst?",
+    name: "KIWI",
+    tag: "Organisation",
+    short: "KIWI",
+    railLetter: "K",
+    color: "#96ce75",
+    badgeColor: "#96ce75",
+    greeting: "Ich bin KIWI. Lass uns deinen Tag, deine Aufgaben und deine Ziele sortieren.",
     shape: "hourglass",
   },
   {
@@ -5073,7 +5073,10 @@ export default function App() {
           )}
           <MultiAssistantCanvas
             focusDesign
-            onOpenPluginStore={() => handleToggleWidget("appStore")}
+            onOpenPluginStore={() => {
+              setIsFocusMode(false);
+              setActiveWidgets(prev => ({ ...(prev || DEFAULT_ACTIVE_WIDGETS), appStore: true }));
+            }}
             agents={agents}
             currentAgent={currentAgent}
             state={state}
@@ -5223,6 +5226,7 @@ export default function App() {
       {/* Google Calendar & Chronos Terminplaner Spatial Widget */}
       {activeWidgets?.calendarWidget && (
         <ChronosCalendarWidget
+          docked
           standalone={true}
           isEditMode={isEditMode}
           onClose={() => handleToggleWidget("calendarWidget")}
@@ -5234,6 +5238,7 @@ export default function App() {
       {/* PapayaOS Goals & Habit Tracker Spatial Widget */}
       {activeWidgets?.goalsWidget && (
         <PapayaGoalsWidget
+          docked
           standalone={true}
           isEditMode={isEditMode}
           onClose={() => handleToggleWidget("goalsWidget")}
@@ -6496,17 +6501,17 @@ export default function App() {
 
       {/* OBSIDIAN BRAIN & KNOWLEDGE GRAPH WORKSPACE */}
       {obsidianBrainOpen && (
-        <div className="fixed inset-0 z-[100] bg-[#111113] flex flex-col animate-fade-in">
+        <div className="studio-memory-dock">
           {/* Header Bar with quick exit back to dashboard */}
           <div className="h-8 bg-[#18181a] border-b border-[#242428] px-3 flex items-center justify-between text-xs text-slate-400">
             <span className="font-mono text-[11px] text-purple-400 font-semibold flex items-center gap-1.5">
-              <span>🧠</span> OBSIDIAN BRAIN WORKSPACE
+              <span>🧠</span> MEMORY
             </span>
             <button
               onClick={() => setObsidianBrainOpen(false)}
               className="px-2.5 py-0.5 rounded bg-[#27272a] hover:bg-[#323238] text-slate-300 hover:text-white transition flex items-center gap-1 text-[11px] cursor-pointer"
             >
-              <span>Zurück zum Dashboard</span>
+              <span>Schließen</span>
               <span className="font-mono text-xs">✕</span>
             </button>
           </div>

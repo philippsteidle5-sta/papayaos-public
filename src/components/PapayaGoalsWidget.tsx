@@ -64,6 +64,7 @@ export interface GoalCategory {
 }
 
 interface PapayaGoalsWidgetProps {
+  docked?: boolean;
   standalone?: boolean;
   isEditMode?: boolean;
   onClose?: () => void;
@@ -169,6 +170,7 @@ function formatPeriodLabel(p: PeriodType, d: Date, lang: "de" | "en"): string {
 
 export const PapayaGoalsWidget: React.FC<PapayaGoalsWidgetProps> = ({
   standalone = true,
+  docked = false,
   isEditMode = false,
   onClose,
   agentColor = "#ff7a59",
@@ -869,9 +871,9 @@ export const PapayaGoalsWidget: React.FC<PapayaGoalsWidgetProps> = ({
   return (
     <div
       role="dialog"
-      aria-modal="true"
+      aria-modal={!docked}
       aria-label="PapayaOS Goals"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none"
+      className={docked ? "studio-tool-dock" : "fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none"}
       onClick={(e) => {
         if (e.target === e.currentTarget && onClose) onClose();
       }}

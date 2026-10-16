@@ -156,7 +156,7 @@ const ModernCodeBlock: React.FC<{ lang: string; code: string }> = ({ lang, code 
 };
 
 // Formats text cleanly with markdown code blocks and inline code
-const ModernFormattedText: React.FC<{ text: string }> = ({ text }) => {
+export const ModernFormattedText: React.FC<{ text: string }> = ({ text }) => {
   const parts = text.split(/(```[\s\S]*?```)/g);
 
   return (

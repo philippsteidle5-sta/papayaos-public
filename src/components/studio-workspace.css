@@ -1,0 +1,10 @@
+/* Existing tools open above the standard chat without replacing its state. */
+.studio-tool-dock,.studio-memory-dock { position:fixed; top:58px; bottom:0; right:0; width:min(1100px,calc(100vw - 92px)); z-index:55; display:flex; flex-direction:column; background:#102b20; border-left:1px solid #f5f0e61c; box-shadow:-15px 0 50px #0003; }
+.studio-tool-dock > div { height:100%; max-height:100%; max-width:100%; border-radius:0; background:#102b20; border-color:#f5f0e61c; }
+.studio-tool-dock > div > header,.studio-memory-dock > div:first-child { background:#19372a; }
+.studio-memory-dock > div:last-child { min-height:0; }
+.studio-calendar-dock { position:fixed; z-index:55; top:58px; bottom:0; right:0; width:min(450px,calc(100vw - 92px)); padding:16px; overflow-y:auto; background:#102b20; border-left:1px solid #f5f0e61c; box-shadow:-15px 0 50px #0003; }
+.studio-calendar-dock .calendar-card-root { max-width:100%; box-shadow:none; }
+.studio-store-dock { position:fixed; z-index:55; right:0; top:58px; bottom:0; width:min(840px,calc(100vw - 92px)); display:flex; }
+.studio-store-dock > div { max-height:100%; height:100%; border-radius:0; }
+@media(max-width:720px) { .studio-tool-dock,.studio-memory-dock,.studio-calendar-dock,.studio-store-dock { top:52px; bottom:0; width:100%; } }
