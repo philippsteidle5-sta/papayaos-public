@@ -3123,12 +3123,12 @@ User prompt: "${finalPrompt}"`,
     writePersistentState("auth-users", serverUserAccounts);
   }
 
-  function createSession(user: ServerUserAccount, res: any) {
+  function createSession(user: ServerUserAccount, res: any, rememberMe = true) {
     const rawSessionId = crypto.randomBytes(32).toString("base64url");
-    authSessions.set(sessionKey(rawSessionId), { userId: user.id, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    authSessions.set(sessionKey(rawSessionId), { userId: user.id, expiresAt: Date.now() + (rememberMe ? 7 : 1) * 24 * 60 * 60 * 1000 });
     saveSessions();
     const secure = res.req?.secure ? "; Secure" : "";
-    res.setHeader("Set-Cookie", `papaya_session=${rawSessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${secure}`);
+    res.setHeader("Set-Cookie", `papaya_session=${rawSessionId}; HttpOnly; SameSite=Lax; Path=/${rememberMe ? "; Max-Age=604800" : ""}${secure}`);
   }
 
   function getSessionUser(req: any): ServerUserAccount | undefined {
@@ -3465,7 +3465,7 @@ User prompt: "${finalPrompt}"`,
   });
 
   app.post("/api/auth/login", (req, res) => {
-    const { email, emailOrKey, password } = req.body || {};
+    const { email, emailOrKey, password, rememberMe } = req.body || {};
     const cleanEmail = typeof (email || emailOrKey) === "string" ? String(email || emailOrKey).trim().toLowerCase() : "";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || typeof password !== "string" || password.length === 0 || password.length > 256) return res.status(400).json({ ok: false, error: "MISSING_CREDENTIALS", message: "Bitte gib eine gültige E-Mail-Adresse und dein Passwort ein." });
     const attemptKey = crypto.createHash("sha256").update(`${req.ip || req.socket.remoteAddress || "unknown"}\0${cleanEmail}`).digest("hex");
@@ -3494,7 +3494,7 @@ User prompt: "${finalPrompt}"`,
     if (user.status === "REVOKED" || activeKickedEmails[cleanEmail]) return res.status(403).json({ ok: false, error: "ACCOUNT_REVOKED", message: "Dieses Konto ist gesperrt." });
     user.lastLoginAt = new Date().toISOString();
     saveAccounts();
-    createSession(user, res);
+    createSession(user, res, rememberMe !== false);
     const { passwordHash: _passwordHash, token: _legacyToken, ...publicUser } = user;
     return res.json({ ok: true, message: "Anmeldung erfolgreich.", user: publicUser });
   });
@@ -4884,6 +4884,10 @@ User prompt: "${finalPrompt}"`,
 
   // Public entry: the domain root is the SalePage; the workspace stays at /?app=true.
   const salesPagePath = path.join(process.cwd(), "public", "sales-preview.html");
+  app.get(["/login.html", "/account-access.html"], (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.sendFile(path.join(process.cwd(), "public", req.path.slice(1)));
+  });
   app.get("/", (req, res, next) => {
     if (req.query.app === "true") return next();
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
