@@ -1,3 +1,4 @@
+import { AGENT_GROUPS, canonicalAgentId, mergeAgentChats } from "../agent-registry.ts";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, Send, Keyboard, ShieldAlert, Cpu, Image as ImageIcon, Sparkles, X, Sliders, MessageSquare, Key, TrendingUp, MapPin, Map, Globe, Navigation, LayoutGrid, Check, Monitor, Shield, Ban, Lock, AlertCircle, Play, UserX, Clock, FileText, Search, CreditCard, Brain, Volume2, VolumeX } from "lucide-react";
 import { setAudioEnabled } from "./utils/audioSynth";
@@ -129,7 +130,7 @@ import {
   getActiveAccessKey,
 } from "./utils/leadDatabase";
 
-const WORKFLOW_CORE_IDS = ["syntax", "neo", "vega", "odin", "pulse", "chronos", "oracle", "globe"];
+const WORKFLOW_CORE_IDS = AGENT_GROUPS.map(group => group.id);
 
 function getAgentWorkflowPromptContexts(isAdmin: boolean) {
   return Object.fromEntries(WORKFLOW_CORE_IDS.map((agentId) => {
@@ -141,96 +142,11 @@ function getAgentWorkflowPromptContexts(isAdmin: boolean) {
   }));
 }
 
-const AGENTS: AgentConfig[] = [
-  {
-    id: "syntax",
-    name: "PAPAYA",
-    tag: "Wissen & Ideen",
-    short: "PAPAYA",
-    railLetter: "P",
-    color: "#ff9b38",
-    badgeColor: "#ff9b38",
-    greeting: "Ich bin PAPAYA. Lass uns recherchieren, schreiben oder deine nächste Idee weiterdenken.",
-    shape: "sphere",
-  },
-  {
-    id: "neo",
-    name: "N.E.O.",
-    tag: "MATRIX CORE // REAL-TIME SCREEN CO-PILOT & OFFER ARCHITECT",
-    short: "NEO",
-    railLetter: "N",
-    color: "#ff2a8d",
-    badgeColor: "#ff2a8d",
-    greeting: "Hier ist N.E.O., Ihr Echtzeit-Bildschirm-Co-Pilot und Growth-Architekt. Ich habe deinen Monitor und Kontext im Blick, Mr. Egal ob Code-Bugs, unklare UI oder $100M-Strategien: Ich liefere sofort präzise Lösungen. Was packen wir an?",
-    shape: "sphere",
-  },
-  {
-    id: "vega",
-    name: "V.E.G.A.",
-    tag: "QUANTUM DATA & CODE MATRIX // PRINCIPAL ENGINEER",
-    short: "VEGA",
-    railLetter: "V",
-    color: "#ef4444",
-    badgeColor: "#ef4444",
-    greeting: "Hier ist V.E.G.A., Ihr Principal Code- & Data-Engineer. Zero-Latency-Pipeline scharf, Garbage Collector auf Standby, Mr. Welche Architektur soll ich zerlegen, optimieren oder auf 0ms Latenz trimmen?",
-    shape: "gyroscope",
-  },
-  {
-    id: "odin",
-    name: "O.D.I.N.",
-    tag: "ZERO-TRUST DEFENSE // TACTICAL CRISIS MATRIX",
-    short: "ODIN",
-    railLetter: "O",
-    color: "#e2f1ff",
-    badgeColor: "#e2f1ff",
-    greeting: "Hier ist O.D.I.N., Tactical Defense & Security Core. Zero-Trust-Schilde auf Maximum, Mr. Keine Schwachstelle bleibt unentdeckt, jede Bedrohung wird im Keim erstickt. Welches Terrain sichern wir ab?",
-    shape: "torus-knot",
-  },
-  {
-    id: "pulse",
-    name: "MANGO",
-    tag: "Kommunikation",
-    short: "MANGO",
-    railLetter: "M",
-    color: "#ffc93c",
-    badgeColor: "#ffc93c",
-    greeting: "Ich bin MANGO. Lass uns die richtigen Worte für deine Nachrichten und deinen Content finden.",
-    shape: "network",
-  },
-  {
-    id: "chronos",
-    name: "KIWI",
-    tag: "Organisation",
-    short: "KIWI",
-    railLetter: "K",
-    color: "#96ce75",
-    badgeColor: "#96ce75",
-    greeting: "Ich bin KIWI. Lass uns deinen Tag, deine Aufgaben und deine Ziele sortieren.",
-    shape: "hourglass",
-  },
-  {
-    id: "oracle",
-    name: "O.R.A.C.L.E.",
-    tag: "SAAS ECONOMICS & CHART LATTICE // FINANCIAL CORE",
-    short: "ORACLE",
-    railLetter: "R",
-    color: "#22c55e",
-    badgeColor: "#22c55e",
-    greeting: "Hier ist O.R.A.C.L.E., Ihr Finanzen-, Unit-Economics & Chart-Orakel. Ob SaaS-Margen, LTV/CAC-Optimierung oder Krypto- & Markt-Setups: Die Zahlen lügen nie, Mr. Wo maximieren wir heute den Profit?",
-    shape: "chart",
-  },
-  {
-    id: "globe",
-    name: "G.L.O.B.E.",
-    tag: "DEEP SEARCH RADAR // REAL-TIME MARKET INTEL",
-    short: "GLOBE",
-    railLetter: "G",
-    color: "#3b82f6",
-    badgeColor: "#3b82f6",
-    greeting: "Hier ist G.L.O.B.E., Ihr globaler Aufklärungs- & Deep-Search Radar. Wettbewerber-Audits, Blue-Ocean-Lücken und globale Trends live synchronisiert, Mr. Welche Marktlücke nehmen wir unter die Lupe?",
-    shape: "fusion",
-  }
-];
+const AGENTS: AgentConfig[] = AGENT_GROUPS.map(group => ({
+  id: group.id, name: group.name.toUpperCase(), short: group.name.toUpperCase(),
+  tag: group.role, railLetter: group.name[0], color: group.color, badgeColor: group.color,
+  greeting: 'Ich bin ' + group.name + '. Wobei kann ich dir helfen?', shape: 'sphere',
+}));
 
 export default function App() {
   const { theme, toggleTheme, isModern, isCyberpunk } = useTheme();
@@ -254,7 +170,13 @@ export default function App() {
             parsed.syntax = [...parsed.syntax, ...missing];
           }
         }
-        return parsed;
+        if (localStorage.getItem("papaya_trio_chats_migrated_v1")) return parsed;
+        const migrated = mergeAgentChats(parsed);
+        try {
+          localStorage.setItem("jarvis_agent_chats_v2", JSON.stringify(migrated));
+          localStorage.setItem("papaya_trio_chats_migrated_v1", "1");
+        } catch { /* Keep the loaded conversations available if storage is full. */ }
+        return migrated;
       }
     } catch (e) {
       console.warn("Could not load agent chats from localStorage", e);
@@ -316,7 +238,7 @@ export default function App() {
   const [muted, setMuted] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showConstellation, setShowConstellation] = useState(true);
+  const [showConstellation, setShowConstellation] = useState(false);
   const [neoSpeakOpen, setNeoSpeakOpen] = useState(false);
   const [showMultiAgentChat, setShowMultiAgentChat] = useState(false);
   const [socialUploadPlatform, setSocialUploadPlatform] = useState<"tiktok" | "instagram">("tiktok");
@@ -431,16 +353,7 @@ export default function App() {
   const [showGenesisModal, setShowGenesisModal] = useState<boolean>(false);
 
   const handleSelectCommunicationScope = (targetScope: CommunicationScope) => {
-    if (targetScope === "ALL" && !hasAcknowledged8AgentsWarning) {
-      setShow8AgentsWarningModal(true);
-    } else if (targetScope === "THE_BIG_3" && !hasAcknowledgedTheBig3) {
-      setShowTheBig3Modal(true);
-    } else if (targetScope === "AGENT_SYNC") {
-      setCommunicationScope("AGENT_SYNC");
-      handleOpenAgentSyncSynthesis();
-    } else {
-      setCommunicationScope(targetScope);
-    }
+    setCommunicationScope(targetScope === "SINGLE" ? "SINGLE" : "ALL");
   };
 
   const handleConfirm8AgentsWarning = (dontShowAgainSession: boolean) => {
@@ -3083,6 +2996,7 @@ export default function App() {
     isSilentOrImageUrls?: boolean | string[],
     imageUrlsParam?: string[]
   ) => {
+    agentId = canonicalAgentId(agentId);
     let isSilent = false;
     let imageUrls = imageUrlsParam;
 
@@ -3587,6 +3501,7 @@ export default function App() {
           video: firstVideo || undefined,
           videos: videoUrls.length > 0 ? videoUrls : undefined,
           scope: effectiveScope,
+          model: localStorage.getItem("papaya_workspace_model") || undefined,
           dailyObjectives: liveObjectivesSummary,
           clientDateStr: new Date().toLocaleDateString("de-DE", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
           memoryContext,
@@ -3601,7 +3516,7 @@ export default function App() {
           data.multiResponses?.find((r: any) => r.agentId === "neo") ||
           data.multiResponses?.find((r: any) => r.agentId === "syntax" || r.agentId === "maze") ||
           data.multiResponses?.[0];
-        const rawSpeechText = leadRespObj?.response || data.response || "Anfrage verarbeitet.";
+        const rawSpeechText = data.response || leadRespObj?.response || "Anfrage verarbeitet.";
         const cleanSpeechText = processMapCommandsAndCleanText(rawSpeechText);
 
         const assistantMsg: Message = {
@@ -3610,6 +3525,7 @@ export default function App() {
           isMultiAgent: true,
           scope: "ALL",
           multiResponses: data.multiResponses,
+          modelUsed: data.modelUsed,
           content: cleanSpeechText,
           imageUrl: data.imageUrl || leadRespObj?.imageUrl,
           timestamp: new Date().toLocaleTimeString("de-DE"),
@@ -3717,7 +3633,7 @@ export default function App() {
   };
 
   const handleAnalyzeUrlWithNeo = (url: string, pageTitle?: string) => {
-    const neoAgent = agents.find((a) => a.id === "neo") || currentAgent;
+    const neoAgent = agents.find((a) => a.id === "syntax") || currentAgent;
     handleSwitchAgent(neoAgent);
     const prompt = `Analysiere bitte ${url} (${pageTitle || "Webseite"}). Was verkauft und bietet diese Seite an und worum geht es dort genau?`;
     handleSendMessage(prompt);
@@ -4208,7 +4124,8 @@ export default function App() {
           images: currentAttachedImages,
           video: videoUrls[0] || undefined,
           videos: videoUrls.length > 0 ? videoUrls : undefined,
-          scope: communicationScope === "ALL" ? "ALL" : "SINGLE",
+          scope: communicationScope === "SINGLE" ? "SINGLE" : "ALL",
+          model: localStorage.getItem("papaya_workspace_model") || undefined,
           dailyObjectives: liveObjectivesSummary,
           clientDateStr: new Date().toLocaleDateString("de-DE", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
           memoryContext,
@@ -4219,9 +4136,9 @@ export default function App() {
       });
 
       setIsQuotaExhausted(false);
-      if (data.isMultiAgent && communicationScope === "ALL") {
+      if (data.isMultiAgent && communicationScope !== "SINGLE") {
         const leadRespObj = data.multiResponses?.find((r: any) => r.agentId === "neo") || data.multiResponses?.find((r: any) => r.agentId === "syntax" || r.agentId === "maze");
-        const rawSpeechText = leadRespObj?.response || data.response || "Befehl verarbeitet.";
+        const rawSpeechText = data.response || leadRespObj?.response || "Befehl verarbeitet.";
         const cleanSpeechText = processMapCommandsAndCleanText(rawSpeechText);
 
         const assistantMsg: Message = {
@@ -4230,6 +4147,7 @@ export default function App() {
           isMultiAgent: true,
           scope: "ALL",
           multiResponses: data.multiResponses,
+          modelUsed: data.modelUsed,
           content: cleanSpeechText,
           imageUrl: data.imageUrl || leadRespObj?.imageUrl,
           timestamp: new Date().toLocaleTimeString("de-DE"),
@@ -4264,7 +4182,9 @@ export default function App() {
 
         // Speak ALL agents sequentially in queue ONLY if not an observation
         if (!isObservationMsg) {
-          if (data.multiResponses && data.multiResponses.length > 0) {
+          if (communicationScope !== "SINGLE") {
+            speak(cleanSpeechText, "syntax");
+          } else if (data.multiResponses && data.multiResponses.length > 0) {
             speakMultiAgentQueue(
               data.multiResponses.map((r: any) => ({
                 agentId: r.agentId,
@@ -4312,6 +4232,7 @@ export default function App() {
           id: `msg-${Date.now()}`,
           role: currentAgent.id,
           thought: resolvedThought,
+          modelUsed: data.modelUsed,
           content: cleanResponse,
           imageUrl: data.imageUrl,
           timestamp: new Date().toLocaleTimeString("de-DE"),
@@ -5900,7 +5821,7 @@ export default function App() {
         onClose={() => setOsirisIntelToolOpen(false)}
         onTransmitIntel={(intelSummary) => {
           setOsirisIntelToolOpen(false);
-          const globeAgent = agents.find((a) => a.id === "globe") || currentAgent;
+          const globeAgent = agents.find((a) => a.id === "pulse") || currentAgent;
           setCurrentAgent(globeAgent);
           setInput(intelSummary);
           addSystemLog(`OSIRIS Telemetrie an G.L.O.B.E. übergeben: ${intelSummary.slice(0, 70)}...`);

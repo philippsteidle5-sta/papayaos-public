@@ -501,6 +501,9 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
           onSelectAgent={onSelectAgent}
           onOpenChat={() => setIsChatOpen(true)}
           messageCount={messages.length}
+          messages={messages}
+          onSendText={(text) => { setInputText(""); onSendMessage?.(text); }}
+          onSpeak={onSpeak}
           onHistory={onOpenMultiAgentChat}
           onNewChat={onClearChat}
           inputText={inputText}

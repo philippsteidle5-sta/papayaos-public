@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowUpRight, MessageSquare, ShieldCheck, SlidersHorizontal, Sparkles, UserRound, Volume2, VolumeX } from "lucide-react";
-import { AgentConfig, CommunicationScope } from "../types";
+import { AgentConfig, CommunicationScope, Message } from "../types";
 import "./focus-canvas.css";
 import { GardenWorkspace } from "./GardenWorkspace";
 
@@ -107,6 +107,9 @@ export interface FocusCanvasLayoutProps {
   onSelectAgent?: (agent: AgentConfig) => void;
   onOpenChat: () => void;
   messageCount: number;
+  messages: Message[];
+  onSendText: (text: string) => void;
+  onSpeak?: (text: string, agentId?: string) => void;
   inputText: string;
   onChangeInputText: (text: string) => void;
   onSubmit: () => void;

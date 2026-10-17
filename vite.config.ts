@@ -48,8 +48,8 @@ export default defineConfig(() => {
           // The offline navigation shell must remain the React app. It decides
           // whether to show the sales page or the authenticated workspace.
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/api\//, /^\/(?:login|account-access|sales-preview)\.html(?:\?|$)/],
-          globIgnores: ['**/login.html', '**/account-access.html', '**/sales-preview.html'],
+          navigateFallbackDenylist: [/^\/api\//, /^\/(?:login|account-access|sales-preview|agent-workspace)\.html(?:\?|$)/],
+          globIgnores: ['**/login.html', '**/account-access.html', '**/sales-preview.html', '**/agent-workspace.html'],
           skipWaiting: true,
           clientsClaim: true,
           cleanupOutdatedCaches: true,

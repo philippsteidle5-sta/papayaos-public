@@ -1,6 +1,7 @@
 export type CommunicationScope = "ALL" | "THE_BIG_3" | "SINGLE" | "AGENT_SYNC";
 
 export interface AgentMultiResponse {
+  modelUsed?: string;
   agentId: string;
   name: string;
   badge: string;
@@ -43,6 +44,7 @@ export interface AgentSyncSynthesis {
 }
 
 export interface Message {
+  modelUsed?: string;
   id: string;
   role: "user" | "syntax" | "maze" | "jarvis" | "neo" | "vega" | "apex" | "odin" | "pulse" | "chronos" | "oracle" | "globe" | string;
   content: string;

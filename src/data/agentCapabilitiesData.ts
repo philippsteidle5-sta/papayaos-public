@@ -1,3 +1,4 @@
+import { AGENT_GROUPS } from "../../agent-registry.ts";
 import React from "react";
 import {
   Sparkles,
@@ -36,7 +37,7 @@ export interface AgentDetails {
   costTier: "LOW" | "BALANCED" | "HEAVY";
 }
 
-export const SYSTEM_AGENTS: AgentDetails[] = [
+const LEGACY_SYSTEM_AGENTS: AgentDetails[] = [
   {
     id: "syntax",
     name: "PAPAYA",
@@ -184,3 +185,8 @@ export const SYSTEM_AGENTS: AgentDetails[] = [
   },
 ];
 
+
+export const SYSTEM_AGENTS: AgentDetails[] = AGENT_GROUPS.map(group => {
+  const sources = LEGACY_SYSTEM_AGENTS.filter(agent => group.members.includes(agent.id));
+  return { ...sources[0], id: group.id, name: group.name, short: group.name.toUpperCase(), tagline: group.role, role: group.role, color: group.color, isBig3: true, capabilities: [...new Set(sources.flatMap(agent => agent.capabilities))], bestFor: sources.map(agent => agent.bestFor).join(" · ") };
+});

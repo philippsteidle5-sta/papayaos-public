@@ -1,48 +1,63 @@
-import React from "react";
-import { Brain, Calendar, History, Plus, Puzzle, Target } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import type { FocusCanvasLayoutProps } from "./FocusCanvasLayout";
 import "./studio-workspace.css";
 import "./standard-chat.css";
 
-const TEAM = [
-  { id: "syntax", name: "Papaya", image: "papaya", color: "#ff9f43", role: ["Wissen & Ideen", "Knowledge & ideas"] },
-  { id: "pulse", name: "Mango", image: "mango", color: "#ffc93c", role: ["Kommunikation", "Communication"] },
-  { id: "chronos", name: "Kiwi", image: "kiwi", color: "#a6d84a", role: ["Organisation", "Organization"] },
-];
-
+// The supplied HTML owns presentation; React retains the authenticated application.
 export function GardenWorkspace(p: FocusCanvasLayoutProps) {
-  const de = p.lang === "de";
-  const selected = TEAM.find(a => a.id === p.currentAgent.id) || TEAM[0];
-  const choose = (id: string) => {
-    const agent = p.agents.find(a => a.id === id);
-    if (agent && p.onSelectAgent) {
-      p.onSelectCommunicationScope?.("SINGLE");
-      p.onSelectAgent(agent);
-    }
-  };
-  const newChat = () => {
-    if (!p.isLoading && p.onNewChat && window.confirm(de
-      ? "Das aktuelle Gespräch dieses Agenten zurücksetzen? Der bisherige Chatverlauf wird gelöscht."
-      : "Reset this agent's current conversation? Its existing chat history will be deleted.")) p.onNewChat();
-  };
-  return <main className="standard-workspace" style={{ "--chat-accent": selected.color } as React.CSSProperties}>
-    <nav className="standard-rail" aria-label={de ? "Agenten und Werkzeuge" : "Agents and tools"}>
-      <div className="standard-rail-top">
-        <button className="standard-icon" onClick={newChat} disabled={!p.onNewChat || p.isLoading} title={de ? "Gespräch zurücksetzen" : "Reset conversation"} aria-label={de ? "Gespräch zurücksetzen" : "Reset conversation"}><Plus size={21}/></button>
-        <button className="standard-icon" onClick={p.onHistory} disabled={!p.onHistory} title={de ? "Chatverlauf öffnen" : "Open chat history"} aria-label={de ? "Chatverlauf öffnen" : "Open chat history"}><History size={21}/></button>
-        <button className="standard-icon standard-store-trigger" onClick={p.onPlugins} disabled={!p.onPlugins} title="Plugin Store" aria-label="Plugin Store"><Puzzle size={21}/></button>
-      </div>
-      <div className="standard-agents" role="group" aria-label={de ? "Agent auswählen" : "Select agent"}>
-        {TEAM.map(a => <button key={a.id} onClick={() => choose(a.id)} disabled={!p.onSelectAgent || p.isLoading} aria-pressed={p.currentAgent.id === a.id && p.communicationScope === "SINGLE"} title={`${a.name} · ${a.role[de ? 0 : 1]}`} style={{ "--agent-accent": a.color } as React.CSSProperties}>
-          <span className="standard-agent-picture"><img src={`/mascots/${a.image}-avatar.png`} alt=""/></span><b>{a.name}</b>
-        </button>)}
-      </div>
-      <div className="standard-rail-bottom">
-        <button className="standard-icon" onClick={p.onMemory} disabled={!p.onMemory} title="Memory" aria-label="Memory"><Brain size={20}/></button>
-        {p.onGoals && <button className="standard-icon" onClick={p.onGoals} title={de ? "Ziele" : "Goals"} aria-label={de ? "Ziele" : "Goals"}><Target size={20}/></button>}
-        {p.onCalendar && <button className="standard-icon" onClick={p.onCalendar} title={de ? "Kalender" : "Calendar"} aria-label={de ? "Kalender" : "Calendar"}><Calendar size={20}/></button>}
-      </div>
-    </nav>
-    <section className="standard-chat-area" aria-label={de ? "Chat" : "Chat"}>{p.children}</section>
+  const frame = useRef<HTMLIFrameElement>(null);
+  const latest = useRef(p); latest.current = p;
+  const [ready, setReady] = useState(false);
+  const [model, setModel] = useState(() => {
+    try { return localStorage.getItem("papaya_workspace_model") || "gemini-3.8-flash"; }
+    catch { return "gemini-3.8-flash"; }
+  });
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frame.current?.contentWindow || event.data?.source !== "papaya-workspace") return;
+      const current = latest.current;
+      const { action, value } = event.data;
+      if (action === "ready") { setReady(true); return; }
+      if (action === "model" && ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"].includes(value)) {
+        try { localStorage.setItem("papaya_workspace_model", value); } catch {}
+        setModel(value);
+      }
+      if (action === "agent" && !current.isLoading) {
+        if (value === "sync") current.onSelectCommunicationScope?.("ALL");
+        else {
+          const id = ({ papaya: "syntax", mango: "pulse", kiwi: "chronos" } as Record<string, string>)[value];
+          const agent = current.agents.find(agent => agent.id === id);
+          if (agent) { current.onSelectCommunicationScope?.("SINGLE"); current.onSelectAgent?.(agent); }
+        }
+      }
+      if (action === "send" && typeof value === "string" && !current.isLoading && current.canSend && (value.trim() || current.images.length)) current.onSendText(value);
+      if (action === "input" && typeof value === "string") current.onChangeInputText(value);
+      if (action === "speak" && typeof value === "string") {
+        const message = current.messages.find(message => message.id === value && message.role !== "user");
+        if (message) current.onSpeak?.(message.content, message.role);
+      }
+      if (action === "plugins") current.onPlugins?.();
+      if (action === "memory") current.onMemory?.();
+      if (action === "calendar") current.onCalendar?.();
+      if (action === "goals") current.onGoals?.();
+      if (action === "history") current.onHistory?.();
+      if (action === "mic") current.onToggleMic?.();
+      if (action === "attach" && current.canAttach) current.onAttach();
+      if (action === "removeImage" && Number.isInteger(value)) current.onRemoveImage?.(value);
+    };
+    window.addEventListener("message", receive);
+    return () => window.removeEventListener("message", receive);
+  }, []);
+  useEffect(() => {
+    if (!ready) return;
+    frame.current?.contentWindow?.postMessage({ source: "papaya-host", state: {
+      agent: p.communicationScope === "SINGLE" ? ({ syntax: "papaya", pulse: "mango", chronos: "kiwi" }[p.currentAgent.id] || "papaya") : "sync",
+      lang: p.lang, model, messages: p.messages, input: p.inputText,
+      loading: p.isLoading, canSend: p.canSend, micActive: p.micActive, images: p.images,
+      tools: { plugins: !!p.onPlugins, memory: !!p.onMemory, calendar: !!p.onCalendar, goals: !!p.onGoals, history: !!p.onHistory, mic: !!p.onToggleMic, attach: p.canAttach },
+    } }, window.location.origin);
+  }, [ready, model, p]);
+  return <main className="standard-workspace" style={{ width: "100%", minHeight: 0, overflow: "hidden" }}>
+    <iframe ref={frame} title="PapayaOS Agent Workspace" src="/agent-workspace.html?v=trio-1" style={{ display: "block", width: "100%", height: "100%", border: 0 }}/>
   </main>;
 }
