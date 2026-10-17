@@ -4884,7 +4884,7 @@ User prompt: "${finalPrompt}"`,
 
   // Public entry: the domain root is the SalePage; the workspace stays at /?app=true.
   const salesPagePath = path.join(process.cwd(), "public", "sales-preview.html");
-  app.get(["/login.html", "/account-access.html"], (req, res) => {
+  app.get(["/login.html", "/account-access.html", "/sales-preview.html"], (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.sendFile(path.join(process.cwd(), "public", req.path.slice(1)));
   });
