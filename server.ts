@@ -2993,6 +2993,9 @@ User prompt: "${finalPrompt}"`,
     createdAt: string;
     status: "NEW" | "CONTACTED" | "INVITED";
     updatedAt: string;
+    consentAt?: string;
+    preferredAgent?: string;
+    language?: string;
   };
   const loadedWaitlist = readPersistentState<unknown>("beta-waitlist", [], BETA_WAITLIST_FILE);
   let betaWaitlist: BetaWaitlistEntry[] = Array.isArray(loadedWaitlist) ? loadedWaitlist.filter((entry): entry is BetaWaitlistEntry =>
@@ -3019,6 +3022,9 @@ User prompt: "${finalPrompt}"`,
       id: crypto.randomUUID(),
       email,
       source: "sales-page",
+      ...(req.body?.consent === true ? { consentAt: now } : {}),
+      ...(["papaya", "mango", "kiwi"].includes(req.body?.agent) ? { preferredAgent: req.body.agent } : {}),
+      ...(["de", "en"].includes(req.body?.lang) ? { language: req.body.lang } : {}),
       createdAt: now,
       status: "NEW",
       updatedAt: now,
