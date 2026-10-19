@@ -20,6 +20,7 @@ import { extractImagesFromPasteEvent } from "../utils/pasteImage";
 import { isVideoUrl } from "../utils/mediaUtils";
 import { ThinkingOrb } from "thinking-orbs";
 import { AgentModeSegmentControl } from "./AgentModeSegmentControl";
+import { StandardChatPanel } from "./StandardChatPanel";
 
 // ∴ Constellation Signature Icon from user reference
 export const ConstellationIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
@@ -36,6 +37,9 @@ export const ConstellationIcon: React.FC<{ className?: string }> = ({ className 
 );
 
 interface AetherChatCardProps {
+  embedded?: boolean;
+  activityState?: string;
+  appearance?: "default" | "forest";
   isOpen: boolean;
   onToggleOpen: () => void;
   currentAgent: AgentConfig;
@@ -68,6 +72,9 @@ interface AetherChatCardProps {
 }
 
 export const AetherChatCard: React.FC<AetherChatCardProps> = ({
+  appearance = "default",
+  embedded = false,
+  activityState,
   isOpen,
   onToggleOpen,
   currentAgent,
@@ -83,6 +90,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
   onImageSelect,
   onImagesSelect,
   effectiveImages = [],
+  onRemoveImage,
   onClearImage,
   onSpeak,
   agentColorMap = {},
@@ -167,12 +175,19 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
   };
 
   const hasMessages = messages.length > 0;
+  const starterPrompts = currentAgent.id === "pulse"
+    ? (lang === "de" ? ["Eine Antwort formulieren", "Einen Beitrag entwerfen", "Eine Nachricht kürzen"] : ["Draft a reply", "Create a post", "Shorten a message"])
+    : currentAgent.id === "chronos"
+    ? (lang === "de" ? ["Meinen Tag planen", "Ein Ziel aufteilen", "Meine Woche sortieren"] : ["Plan my day", "Break down a goal", "Organize my week"])
+    : (lang === "de" ? ["Eine Idee weiterdenken", "Einen Text verbessern", "Ein Thema verstehen"] : ["Explore an idea", "Improve a draft", "Understand a topic"]);
   const agentColor = currentAgent.color || "#00f0ff";
 
   // Dynamic guidance question from user screenshot ("How can I guide you?")
   const guidanceLabel = lang === "de"
     ? isAllMode ? "Wie kann die Flotte dich führen?" : isBig3Mode ? "Wie kann The Big 3 dich leiten?" : `Wie kann ${currentAgent.short || currentAgent.name} dich unterstützen?`
     : isAllMode ? "How can the Fleet guide you?" : isBig3Mode ? "How can The Big 3 guide you?" : `How can I guide you?`;
+
+  if (embedded) return <StandardChatPanel currentAgent={currentAgent} messages={messages} isLoading={isLoading} inputText={inputText} onChangeInputText={onChangeInputText} onSendMessage={onSendMessage} micActive={micActive} onToggleMic={onToggleMic} onImageSelect={onImageSelect} onImagesSelect={onImagesSelect} effectiveImages={effectiveImages} onRemoveImage={onRemoveImage} onClearImage={onClearImage} onSpeak={onSpeak} agentColorMap={agentColorMap} onOpenAgentSyncSynthesis={onOpenAgentSyncSynthesis} onOpenVoiceConference={onOpenVoiceConference} lang={lang === "de" ? "de" : "en"} activityState={activityState}/>;
 
   return (
     <>
@@ -221,7 +236,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
           </button>
 
           {/* Quick Agenten-Modus Control (Einzeln | Big 3 | Alle 8) */}
-          {onSelectCommunicationScope && (
+          {onSelectCommunicationScope && !embedded && (
             <div className="hidden md:block shadow-[0_18px_45px_rgba(0,0,0,0.65)]">
               <AgentModeSegmentControl
                 currentScope={communicationScope}
@@ -237,7 +252,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
       {/* ─────────────────────────────────────────────────────────────
           2. EXPANDED AETHER CHAT CARD (With Fluid Opening Animation)
          ───────────────────────────────────────────────────────────── */}
-      {justOpened && (
+      {justOpened && !embedded && (
         <div
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-35 pointer-events-none w-52 h-52 rounded-full animate-chat-shockwave"
           style={{
@@ -251,7 +266,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
       {isOpen && (
         <div
           id="clean-embedded-chat-card"
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col pointer-events-auto select-none transition-all duration-300 animate-chat-open ${
+          className={embedded ? "workspace-chat-embedded" : `fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col pointer-events-auto select-none transition-all duration-300 animate-chat-open ${
             isExpanded
               ? "w-[min(820px,calc(100vw-32px))] h-[84vh] max-h-[860px]"
               : hasMessages
@@ -263,15 +278,16 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
           <div
             className="relative flex flex-col w-full h-full rounded-[28px] overflow-hidden transition-all duration-300"
             style={{
-              border: `1px solid ${currentAgent.color ? `${currentAgent.color}40` : "rgba(255, 255, 255, 0.12)"}`,
-              background: "linear-gradient(180deg, rgba(14, 16, 26, 0.96), rgba(6, 7, 10, 0.985))",
+              border: embedded ? "none" : `1px solid ${currentAgent.color ? `${currentAgent.color}40` : "rgba(255, 255, 255, 0.12)"}`,
+              background: embedded ? "transparent" : appearance === "forest" ? "linear-gradient(180deg, #163c2b, #0c281c)" : "linear-gradient(180deg, rgba(14, 16, 26, 0.96), rgba(6, 7, 10, 0.985))",
               backdropFilter: "blur(32px)",
               WebkitBackdropFilter: "blur(32px)",
-              boxShadow: `0 25px 70px rgba(0,0,0,0.85), 0 0 40px ${currentAgent.color ? `${currentAgent.color}20` : "rgba(255,122,89,0.15)"}, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.9)`,
+              boxShadow: embedded ? "none" : `0 25px 70px rgba(0,0,0,0.85), 0 0 40px ${currentAgent.color ? `${currentAgent.color}20` : "rgba(255,122,89,0.15)"}, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.9)`,
             }}
           >
             {/* Top Luminous Neon Energy Beam Sweep on Open */}
             <div
+              hidden={embedded}
               className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none z-50 bg-gradient-to-r from-transparent via-current to-transparent opacity-90 animate-pulse"
               style={{
                 color: currentAgent.color || "#ff7a59",
@@ -297,7 +313,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
               </div>
 
               {/* Agent Mode Switcher (Einzeln | Big 3 | Alle 8) */}
-              {onSelectCommunicationScope && (
+              {onSelectCommunicationScope && !embedded && (
                 <div className="hidden sm:block">
                   <AgentModeSegmentControl
                     currentScope={communicationScope}
@@ -399,6 +415,13 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
               </div>
             </div>
 
+            {embedded && !hasMessages && <div className="workspace-chat-welcome">
+              <img src={`/mascots/${currentAgent.id === "pulse" ? "mango" : currentAgent.id === "chronos" ? "kiwi" : "papaya"}.png`} alt="" width="112" height="112"/>
+              <span>{lang === "de" ? "EIN GUTER ANFANG" : "A FRESH START"}</span>
+              <h2>{lang === "de" ? "Was machen wir heute?" : "What shall we work on?"}</h2>
+              <p>{lang === "de" ? "Bring eine Idee mit. Wir finden den nächsten Schritt." : "Bring an idea. Let's find the next step."}</p>
+              <div>{starterPrompts.map(prompt => <button key={prompt} onClick={() => { onChangeInputText(prompt); textareaRef.current?.focus(); }}>{prompt}<ArrowUpRight size={14}/></button>)}</div>
+            </div>}
             {/* Scrollable Conversation Stream (Visible when messages exist) */}
             {hasMessages && (
               <div
@@ -414,7 +437,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
                         return (
                           <div
                             key={msg.id}
-                            className="self-end max-w-[85%] ml-auto p-3.5 rounded-2xl rounded-tr-sm text-[#f2ede6] shadow-sm space-y-1 font-sans text-sm"
+                            className="studio-message self-end max-w-[85%] ml-auto p-3.5 rounded-2xl rounded-tr-sm text-[#f2ede6] shadow-sm space-y-1 font-sans text-sm"
                             style={{
                               background: "linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))",
                               border: "1px solid rgba(255, 255, 255, 0.10)",
@@ -449,7 +472,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
 
                       // Agent response
                       return (
-                        <div key={msg.id} className="w-full">
+                        <div key={msg.id} className="studio-message w-full">
                           <MultiAgentResponseCard
                             msg={msg}
                             lang={lang}
@@ -490,16 +513,12 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
             )}
 
             {/* Quick Prompts (When zero messages exist) */}
-            {!hasMessages && (
+            {!hasMessages && !embedded && (
               <div className="px-5 pt-3.5 pb-2 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
                   <span className="flex items-center gap-1.5 text-zinc-200 font-semibold">
                     <Sparkles className="w-3.5 h-3.5 text-[#ffb547]" />
                     Schnellstart-Vorschläge
-                  </span>
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    0ms Latenz
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -534,7 +553,7 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
               <div
                 className="relative rounded-2xl p-3.5 sm:p-4 transition-all duration-200"
                 style={{
-                  background: "#0b0d14",
+                  background: embedded ? "#193b2d" : "#0b0d14",
                   border: "1px solid rgba(255, 255, 255, 0.08)",
                   boxShadow: "inset 0 2px 8px rgba(0,0,0,0.6)",
                 }}
@@ -578,20 +597,14 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
                       else if (onImageSelect) onImageSelect(files[0]);
                     }
                   }}
-                  placeholder={
-                    micActive
-                      ? "Höre zu... Sprich jetzt..."
-                      : lang === "de"
-                      ? "Is the sound quality comparable to top ear buds on the market? (oder tippe deine Frage...)"
-                      : "Is the sound quality comparable to top ear buds on the market?"
-                  }
+                  placeholder={micActive ? (lang === "de" ? "Ich höre zu …" : "Listening …") : (lang === "de" ? "Schreib deine Nachricht …" : "Write your message …")}
                   className="w-full bg-transparent resize-none outline-none border-none text-[#f2ede6] placeholder:text-[#6f7382] font-sans text-sm sm:text-[14.5px] leading-relaxed selection:bg-[#ff7a59]/30"
                 />
 
                 {/* "Press Enter to send" Helper Text (Directly from Image 2) */}
                 <div className="flex items-center justify-end pt-1">
                   <span className="text-[11px] font-sans text-zinc-400/75 tracking-tight select-none font-mono">
-                    Press Enter to send
+                    {lang === "de" ? "Enter zum Senden · Shift+Enter für neue Zeile" : "Enter to send · Shift+Enter for a new line"}
                   </span>
                 </div>
               </div>
@@ -673,5 +686,4 @@ export const AetherChatCard: React.FC<AetherChatCardProps> = ({
     </>
   );
 };
-
 

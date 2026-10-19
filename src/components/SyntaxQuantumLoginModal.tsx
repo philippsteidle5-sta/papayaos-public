@@ -535,9 +535,9 @@ export const SyntaxQuantumLoginModal: React.FC<SyntaxQuantumLoginModalProps> = (
       return;
     }
 
-    if (regPass.length < 8) {
+    if (regPass.length < 12) {
       playErrorTone();
-      setErrorMsg(lang === "de" ? "Das Passwort muss mindestens 8 Zeichen lang sein." : "Password must be at least 8 characters.");
+      setErrorMsg(lang === "de" ? "Das Passwort muss mindestens 12 Zeichen lang sein." : "Password must be at least 12 characters.");
       return;
     }
 

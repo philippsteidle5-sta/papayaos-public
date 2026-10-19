@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>PapayaOS · Kontosicherheit</title>
+<style>body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0b2019;color:#fff5df;font:16px system-ui}main{width:min(440px,85vw);padding:28px;border:1px solid #ffffff25;border-radius:20px}label{display:block;margin-top:18px}input,button{box-sizing:border-box;width:100%;padding:13px;border-radius:10px;margin-top:7px;font:inherit}input{background:#ffffff09;color:inherit;border:1px solid #ffffff35}button{background:#ffb52e;color:#18271a;border:0;cursor:pointer;margin-top:20px}button:disabled{opacity:.5}a{color:#ffcc72}#message{white-space:pre-wrap}small{display:block;margin-top:10px;color:#c5d3c8}</style></head>
+<body><main><h1 id="title">Passwort vergessen</h1><form id="form">
+<label id="emailLabel">E-Mail-Adresse<input id="email" type="email" autocomplete="email"></label>
+<label id="passwordLabel" hidden>Neues Passwort<input id="password" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label>
+<label id="confirmLabel" hidden>Neues Passwort wiederholen<input id="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label>
+<label id="codeLabel" hidden>Authenticator- oder Wiederherstellungscode (falls eingerichtet)<input id="code" autocomplete="one-time-code"></label>
+<button id="submit" type="submit">Reset-Link anfordern</button><p id="message" role="status"></p></form><a href="/login.html" target="_top">Zur Anmeldung</a></main>
+<script>
+const params=new URLSearchParams(location.hash.slice(1)), token=params.get('token'), purpose=params.get('purpose');
+history.replaceState(null,'',location.pathname);
+const mode=token&&purpose==='verify'?'verify':token&&purpose==='reset'?'reset':'forgot';
+const $=id=>document.getElementById(id);
+if(mode!=='forgot')$('emailLabel').hidden=true;
+if(mode==='verify'){$('title').textContent='E-Mail bestätigen';$('submit').textContent='E-Mail jetzt bestätigen';}
+if(mode==='reset'){$('title').textContent='Passwort zurücksetzen';$('submit').textContent='Neues Passwort speichern';for(const id of ['passwordLabel','confirmLabel','codeLabel'])$(id).hidden=false;}
+$('form').onsubmit=async event=>{event.preventDefault();$('message').textContent='';
+if(mode==='reset'&&($('password').value.length<12||$('password').value!==$('confirm').value)){$('message').textContent='Mindestens 12 Zeichen; beide Passwörter müssen übereinstimmen.';return;}
+if(mode==='forgot'&&!$('email').value.trim()){$('message').textContent='Bitte gib deine E-Mail-Adresse ein.';return;}
+$('submit').disabled=true;
+try{const route=mode==='verify'?'verify-email':mode==='reset'?'reset-password':'forgot-password';const body=mode==='forgot'?{email:$('email').value.trim()}:{token,password:$('password').value,code:$('code').value.trim()};
+const r=await fetch('/api/auth/'+route,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();$('message').textContent=d.message||'Anfrage fehlgeschlagen.';if(!r.ok)$('submit').disabled=false;
+}catch{$('message').textContent='Verbindung fehlgeschlagen. Bitte erneut versuchen.';$('submit').disabled=false;}};
+</script></body></html>

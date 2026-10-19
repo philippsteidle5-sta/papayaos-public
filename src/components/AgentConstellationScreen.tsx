@@ -65,8 +65,8 @@ function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart, onVoice }:
     vega: { line: "Mach aus Ideen Richtung.", detail: "V.E.G.A. bringt Struktur in schwierige Aufgaben und macht den nächsten Zug sichtbar.", action: "V.E.G.A. öffnen" },
     oracle: { line: "Erkenne, was sich verändert.", detail: "O.R.A.C.L.E. ordnet Signale und Muster, damit du Märkte besser einordnen kannst.", action: "O.R.A.C.L.E. öffnen" },
     odin: { line: "Behalte den Überblick.", detail: "O.D.I.N. führt Aufgaben, Entscheidungen und Abläufe an einem Ort zusammen.", action: "O.D.I.N. öffnen" },
-    chronos: { line: "Gib deiner Zeit Form.", detail: "C.H.R.O.N.O.S. macht aus Vorhaben einen Rhythmus, der in deinen Tag passt.", action: "C.H.R.O.N.O.S. öffnen" },
-    pulse: { line: "Bring Ideen in Bewegung.", detail: "P.U.L.S.E. denkt Inhalte, Menschen und Reichweite gemeinsam mit dir weiter.", action: "P.U.L.S.E. öffnen" },
+    chronos: { line: "Gib deiner Zeit Form.", detail: "Kiwi macht aus Vorhaben einen Rhythmus, der in deinen Tag passt.", action: "Kiwi öffnen" },
+    pulse: { line: "Bring Ideen in Bewegung.", detail: "Mango denkt Inhalte, Menschen und Reichweite gemeinsam mit dir weiter.", action: "Mango öffnen" },
   };
   const story = stories[activeNode?.id] || stories.maze;
   return (
@@ -74,7 +74,7 @@ function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart, onVoice }:
       <div className="papaya-deck-shell">
         <aside className="papaya-deck-rail">
           <div className="papaya-deck-brand"><span className="papaya-deck-brand-icon">P</span><span><strong>PAPAYA<span>OS</span></strong><small>YOUR OWN INTELLIGENCE</small></span></div>
-          <div className="papaya-deck-rail-heading"><span>DEIN SYSTEM</span><strong>Wähle einen Core</strong></div>
+          <div className="papaya-deck-rail-heading"><span>DEIN SYSTEM</span><strong>Wähle deinen Agenten</strong></div>
           <nav className="papaya-deck-nav" aria-label="PapayaOS Cores">
             {nodes.map((node, index) => {
               const agent = agentFor(node);
@@ -84,7 +84,7 @@ function ModernAgentWorkspace({ nodes, agents, currentAgent, onStart, onVoice }:
               </button>;
             })}
           </nav>
-          <div className="papaya-deck-rail-foot"><span className="papaya-deck-status-light"/><span><strong>8 Cores verbunden</strong><small>Ein System. Dein Tempo.</small></span></div>
+          <div className="papaya-deck-rail-foot"><span className="papaya-deck-status-light"/><span><strong>3 Agenten</strong><small>Ein System. Dein Tempo.</small></span></div>
         </aside>
 
         <section className="papaya-deck-main" aria-label="Ausgewählter Core" onPointerMove={event => { const rect = event.currentTarget.getBoundingClientRect(); event.currentTarget.style.setProperty("--pointer-x", `${event.clientX - rect.left}px`); event.currentTarget.style.setProperty("--pointer-y", `${event.clientY - rect.top}px`); }}>
@@ -189,18 +189,10 @@ export const AgentConstellationScreen: React.FC<AgentConstellationScreenProps> =
     []
   );
 
-  const SATELLITES_DEF: ConstellationNode[] = useMemo(
-    () => [
-      { id: "neo", name: "N.E.O.", sub: "VISION CORE", short: "NEO", color: 0xff2d95, hexColor: "#ff2d95", x: -6.4, y: 3.6, pos: new THREE.Vector3(-6.4, 3.6, 0.4) },
-      { id: "globe", name: "G.L.O.B.E.", sub: "DEEP SEARCH", short: "GLOBE", color: 0x3b82f6, hexColor: "#3b82f6", x: 0.0, y: 4.8, pos: new THREE.Vector3(0.0, 4.8, -0.2) },
-      { id: "vega", name: "V.E.G.A.", sub: "TACTICAL", short: "VEGA", color: 0xff2222, hexColor: "#ff2222", x: 6.4, y: 3.6, pos: new THREE.Vector3(6.4, 3.6, 0.3) },
-      { id: "oracle", name: "O.R.A.C.L.E.", sub: "MARKET LATTICE", short: "ORACLE", color: 0x22c55e, hexColor: "#22c55e", x: -9.0, y: -0.2, pos: new THREE.Vector3(-9.0, -0.2, -0.1) },
-      { id: "odin", name: "O.D.I.N.", sub: "EXECUTIVE", short: "ODIN", color: 0xe2f1ff, hexColor: "#e2f1ff", x: 9.0, y: -0.2, pos: new THREE.Vector3(9.0, -0.2, 0.2) },
-      { id: "chronos", name: "C.H.R.O.N.O.S.", sub: "TEMPORAL", short: "CHRONOS", color: 0xeab308, hexColor: "#eab308", x: -5.8, y: -4.2, pos: new THREE.Vector3(-5.8, -4.2, 0.1) },
-      { id: "pulse", name: "P.U.L.S.E.", sub: "VIRAL NETWORK", short: "PULSE", color: 0xa855f7, hexColor: "#a855f7", x: 5.8, y: -4.2, pos: new THREE.Vector3(5.8, -4.2, -0.3) },
-    ],
-    []
-  );
+  const SATELLITES_DEF: ConstellationNode[] = useMemo(() => [
+    { id: "pulse", name: "MANGO", sub: "KOMMUNIKATION & RECHERCHE", short: "MANGO", color: 0xffc93c, hexColor: "#ffc93c", x: -5.8, y: -2, pos: new THREE.Vector3(-5.8, -2, .1) },
+    { id: "chronos", name: "KIWI", sub: "ORGANISATION & SICHERHEIT", short: "KIWI", color: 0x96ce75, hexColor: "#96ce75", x: 5.8, y: -2, pos: new THREE.Vector3(5.8, -2, -.1) },
+  ], []);
 
   const allPrimaryNodes = useMemo(() => [CENTER_DEF, ...SATELLITES_DEF], [CENTER_DEF, SATELLITES_DEF]);
 

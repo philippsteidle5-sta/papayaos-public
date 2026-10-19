@@ -452,6 +452,41 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
     </>
   );
 
+  const chatPanel = (<AetherChatCard
+        activityState={state}
+        appearance={focusDesign ? "forest" : "default"}
+        isOpen={focusDesign || isChatOpen}
+        embedded={focusDesign}
+        onToggleOpen={() => setIsChatOpen(!isChatOpen)}
+        currentAgent={currentAgent}
+        messages={messages}
+        isLoading={isLoading}
+        inputText={inputText}
+        onChangeInputText={setInputText}
+        onSendMessage={(text) => onSendMessage?.(text || inputText)}
+        onClearChat={onClearChat}
+        onOpenMultiAgentChat={onOpenMultiAgentChat}
+        micActive={micActive}
+        onToggleMic={onToggleMic}
+        onImageSelect={onImageSelect}
+        onImagesSelect={onImagesSelect}
+        effectiveImages={effectiveImages}
+        onClearImage={onClearImage}
+        onRemoveImage={onRemoveImage}
+        onSpeak={onSpeak}
+        agentColorMap={agentColorMap}
+        onOpenAgentSyncSynthesis={onOpenAgentSyncSynthesis}
+        onOpenVoiceConference={onOpenVoiceConference}
+        isAllMode={isAllMode}
+        isBig3Mode={isBig3Mode}
+        compareEnabled={compareEnabled}
+        lang={lang}
+        muted={muted}
+        onToggleMute={onToggleMute}
+        communicationScope={communicationScope}
+        onSelectCommunicationScope={onSelectCommunicationScope}
+      />);
+
   return (
     <div className={focusDesign ? "focus-canvas-root" : "absolute inset-0 w-full h-full z-0 overflow-hidden pointer-events-none select-none"} role="region" aria-label="PapayaOS Clean Focus Canvas System">
       {focusDesign ? (
@@ -466,6 +501,11 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
           onSelectAgent={onSelectAgent}
           onOpenChat={() => setIsChatOpen(true)}
           messageCount={messages.length}
+          messages={messages}
+          onSendText={(text) => { setInputText(""); onSendMessage?.(text); }}
+          onSpeak={onSpeak}
+          onHistory={onOpenMultiAgentChat}
+          onNewChat={onClearChat}
           inputText={inputText}
           onChangeInputText={setInputText}
           onSubmit={() => { setIsChatOpen(true); handleInternalSend(); }}
@@ -488,7 +528,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
           isMapOpen={isGoogleMapsOpen}
           isCalendarOpen={calendarActive}
           isGoalsOpen={isGoalsOpen}
-        >{canvasScene}</FocusCanvasLayout>
+        >{chatPanel}</FocusCanvasLayout>
       ) : canvasScene}
       {focusDesign && <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFileChange} />}
 
@@ -601,37 +641,7 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
       </div>}
 
       {/* AETHER CHAT SYSTEM (Collapsed Pill in Image 1 & Recessed Floating Glass Card in Image 2) */}
-      {(!focusDesign || isChatOpen) && <AetherChatCard
-        isOpen={isChatOpen}
-        onToggleOpen={() => setIsChatOpen(!isChatOpen)}
-        currentAgent={currentAgent}
-        messages={messages}
-        isLoading={isLoading}
-        inputText={inputText}
-        onChangeInputText={setInputText}
-        onSendMessage={(text) => onSendMessage?.(text || inputText)}
-        onClearChat={onClearChat}
-        onOpenMultiAgentChat={onOpenMultiAgentChat}
-        micActive={micActive}
-        onToggleMic={onToggleMic}
-        onImageSelect={onImageSelect}
-        onImagesSelect={onImagesSelect}
-        effectiveImages={effectiveImages}
-        onClearImage={onClearImage}
-        onRemoveImage={onRemoveImage}
-        onSpeak={onSpeak}
-        agentColorMap={agentColorMap}
-        onOpenAgentSyncSynthesis={onOpenAgentSyncSynthesis}
-        onOpenVoiceConference={onOpenVoiceConference}
-        isAllMode={isAllMode}
-        isBig3Mode={isBig3Mode}
-        compareEnabled={compareEnabled}
-        lang={lang}
-        muted={muted}
-        onToggleMute={onToggleMute}
-        communicationScope={communicationScope}
-        onSelectCommunicationScope={onSelectCommunicationScope}
-      />}
+      {!focusDesign && chatPanel}
 
       {/* Standalone Fallback Calendar in Focus Canvas */}
       {!onOpenCalendar && internalCalendarOpen && (
@@ -647,5 +657,3 @@ export const MultiAssistantCanvas = React.memo<MultiAssistantCanvasProps>(({
 });
 
 export default MultiAssistantCanvas;
-
-

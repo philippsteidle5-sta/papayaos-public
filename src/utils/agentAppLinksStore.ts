@@ -1,5 +1,7 @@
+import { AGENT_GROUPS, canonicalAgentId } from "../../agent-registry.ts";
 // src/utils/agentAppLinksStore.ts
 // Robust, persistent store to link apps & system functions to AI agents (e.g. WebBrowser -> NEO, ClaudeCode -> SYNTAX)
+import { getSavedAgentWorkflowGraph, getWorkflowPlan } from "./agentWorkflowGraph";
 
 export interface SystemAppDefinition {
   id: string;
@@ -174,12 +176,12 @@ export interface AgentWorkflowSettings {
 
 function defaultWorkflowSettings(agentId: string): AgentWorkflowSettings {
   const links = getAppToAgentLinkMap();
-  const normalizedAgent = agentId.toLowerCase();
+  const normalizedAgent = canonicalAgentId(agentId);
   return {
     enabledAppIds: SYSTEM_APPS_CATALOG
       .filter((app) => {
         const linked = links[app.id] || app.defaultAgentId;
-        return linked === normalizedAgent || linked === "all";
+        return canonicalAgentId(linked) === normalizedAgent || linked === "all";
       })
       .map((app) => app.id),
     customInstructions: "",
@@ -194,7 +196,25 @@ function readWorkflowOverrides(): Record<string, AgentWorkflowSettings> {
     const raw = localStorage.getItem(WORKFLOW_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    if (!localStorage.getItem("papaya_trio_workflows_migrated_v1")) {
+      // Retain the original settings and require the strictest prior approval
+      // and memory preferences when several old roles become one.
+      if (!localStorage.getItem("papaya_workflows_before_trio_v1")) localStorage.setItem("papaya_workflows_before_trio_v1", raw);
+      for (const group of AGENT_GROUPS) {
+        const previous: AgentWorkflowSettings[] = group.members.map(id => parsed[id]).filter(value => value && typeof value === "object");
+        if (!previous.length) continue;
+        parsed[group.id] = {
+          enabledAppIds: [...new Set(previous.flatMap(settings => Array.isArray(settings.enabledAppIds) ? settings.enabledAppIds : []))],
+          customInstructions: [...new Set(previous.map(settings => settings.customInstructions).filter(value => typeof value === "string" && value.trim()))].join("\n"),
+          useMemory: previous.every(settings => settings.useMemory !== false),
+          requireActionApproval: previous.some(settings => settings.requireActionApproval !== false),
+        };
+      }
+      localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(parsed));
+      localStorage.setItem("papaya_trio_workflows_migrated_v1", "1");
+    }
+    return parsed;
   } catch (e) {
     console.warn("Could not parse agent workflows from localStorage", e);
     return {};
@@ -202,7 +222,14 @@ function readWorkflowOverrides(): Record<string, AgentWorkflowSettings> {
 }
 
 export function getAgentWorkflowSettings(agentId: string): AgentWorkflowSettings {
-  const saved = readWorkflowOverrides()[agentId.toLowerCase()];
+  const overrides = readWorkflowOverrides();
+  const canonical = canonicalAgentId(agentId);
+  const group = AGENT_GROUPS.find(group => group.id === canonical);
+  let saved = overrides[canonical];
+  if (!saved && group) {
+    const previous = group.members.map(id => overrides[id]).filter(Boolean);
+    if (previous.length) saved = { enabledAppIds: [...new Set(previous.flatMap(settings => settings.enabledAppIds || []))], customInstructions: previous.map(settings => settings.customInstructions).filter(Boolean).join("\n"), useMemory: previous.every(settings => settings.useMemory !== false), requireActionApproval: previous.some(settings => settings.requireActionApproval !== false) };
+  }
   if (!saved || typeof saved !== "object") return defaultWorkflowSettings(agentId);
   const validIds = new Set(SYSTEM_APPS_CATALOG.map((app) => app.id));
   return {
@@ -261,7 +288,8 @@ export function getAppToAgentLinkMap(): Record<string, string> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      return Object.fromEntries(Object.entries(parsed).map(([app, agent]) => [app, typeof agent === "string" ? canonicalAgentId(agent) : "none"]));
     }
   } catch (e) {
     console.warn("Could not parse app links from localStorage", e);
@@ -270,7 +298,7 @@ export function getAppToAgentLinkMap(): Record<string, string> {
   // Fallback to default recommendations
   const initial: Record<string, string> = {};
   SYSTEM_APPS_CATALOG.forEach((app) => {
-    initial[app.id] = app.defaultAgentId;
+    initial[app.id] = canonicalAgentId(app.defaultAgentId);
   });
   return initial;
 }
@@ -314,6 +342,7 @@ export function getAppIdsLinkedToAgent(agentId: string, isAdmin = false): string
 export function getLinkedAppsContextForPrompt(agentId: string, isAdmin = false): string {
   const linked = getAppsLinkedToAgent(agentId, isAdmin);
   const settings = getAgentWorkflowSettings(agentId);
+  const savedGraph = getSavedAgentWorkflowGraph(agentId, SYSTEM_APPS_CATALOG.map((app) => app.id));
   if (linked.length === 0 && !settings.customInstructions.trim()) return "";
   const names = linked.map((a) => `${a.nameDe} (${a.shortName})`).join(", ");
   const parts = [
@@ -328,6 +357,17 @@ export function getLinkedAppsContextForPrompt(agentId: string, isAdmin = false):
       ? "Frage den Nutzer vor externen, folgenreichen oder nicht rückgängig zu machenden Aktionen um Bestätigung."
       : "Der Nutzer hat für diesen Agenten die zusätzliche Bestätigungsaufforderung deaktiviert.",
   ];
+  if (savedGraph) {
+    const plan = getWorkflowPlan(savedGraph);
+    const allowedIds = new Set(linked.map((app) => app.id));
+    const orderedNames = plan.orderedAppIds
+      .filter((id) => allowedIds.has(id))
+      .map((id) => SYSTEM_APPS_CATALOG.find((app) => app.id === id)?.nameDe)
+      .filter((name): name is string => Boolean(name));
+    if (plan.agentConnected && !plan.hasCycle && orderedNames.length) {
+      parts.push("Bevorzugte Reihenfolge, sofern die Funktionen verfügbar sind: " + orderedNames.join(" → ") + ". Der gespeicherte Graph ist eine Planung, keine automatische Ausführung.");
+    }
+  }
   if (settings.customInstructions.trim()) {
     parts.push("Zusätzliche Arbeitsweise dieses Agenten: " + settings.customInstructions.trim());
   }

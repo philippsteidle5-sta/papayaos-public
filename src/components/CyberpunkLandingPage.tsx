@@ -45,7 +45,7 @@ export const CyberpunkLandingPage: React.FC<CyberpunkLandingPageProps> = ({ onEn
         isOpen={loginOpen}
         onClose={() => setLoginOpen(false)}
         onSuccess={(email, role) => onEnterApp(email, role)}
-        lang={lang}
+        lang={lang === "de" ? "de" : "en"}
       />
     </main>
   );

@@ -17,4 +17,6 @@ data/auth-users.json*
 data/beta-waitlist.json*
 data/papayaos.sqlite*
 data/auth-sessions.json*
+**/account-security.key
+._local-preview*/
 

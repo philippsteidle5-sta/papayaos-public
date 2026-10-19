@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PapayaOS – Agent Workspace</title>
+<meta name="theme-color" content="#0c2a1b">
+<style>
+:root{color-scheme:dark;--bg:#0c2a1b;--bg2:#14402a;--leaf:#3fa34d;--orange:#ff8a1f;--yellow:#ffc93c;--cream:#fff3dc;--muted:#a9c4b2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(60% 50% at 50% 30%,rgba(255,138,31,.22) 0%,rgba(255,138,31,0) 70%),radial-gradient(90% 70% at 50% 110%,#1d5a37 0%,rgba(29,90,55,0) 60%),var(--bg);background-attachment:fixed;color:var(--cream);font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
+img{max-width:100%}
+.eyebrow{color:var(--orange);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+@keyframes faqOpen{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.langbar{max-width:1140px;margin:18px auto -54px;padding:0 24px;display:flex;justify-content:flex-end;position:relative;z-index:2}
+.langbar div{display:flex;padding:3px;border-radius:12px;background:rgba(255,243,220,.05);border:1px solid rgba(255,243,220,.14)}
+.langbar button{all:unset;cursor:pointer;padding:5px 11px;border-radius:9px;font-size:.8rem;font-weight:600;color:var(--muted)}
+.langbar button:focus-visible{outline:2px solid var(--yellow)}
+.langbar button[aria-pressed=true]{background:rgba(255,138,31,.2);color:var(--cream)}
+/* === INTERAKTIVER MULTI-AGENTEN CHAT (PAPAYA, MANGO, KIWI & SYNC-MODUS) === */
+.agent-chat-sec{
+  position:relative;max-width:1140px;margin:78px auto 36px;padding:0 24px;
+  isolation:isolate;
+}
+.agent-chat-shell{
+  position:relative;border-radius:30px;overflow:hidden;
+  background:
+    radial-gradient(48% 58% at 15% 15%, rgba(255,138,31,.11) 0%, transparent 70%),
+    radial-gradient(48% 58% at 88% 85%, rgba(63,163,77,.12) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(14,43,29,.97) 0%, rgba(9,29,19,.99) 100%);
+  border:1px solid rgba(255,243,220,.15);
+  box-shadow:0 30px 68px -18px rgba(0,0,0,.65);
+}
+.ac-header{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  padding:22px 28px;border-bottom:1px solid rgba(255,243,220,.11);
+  background:rgba(8,25,16,.55);
+}
+.ac-head-left{display:flex;flex-direction:column;gap:4px}
+.ac-head-title{
+  display:flex;align-items:center;gap:10px;
+  font-family:"Cormorant Garamond",Georgia,serif;
+  font-size:clamp(1.6rem,2.8vw,2.2rem);font-weight:600;color:var(--cream);margin:0;line-height:1.1;
+}
+.ac-live-dot{
+  width:9px;height:9px;border-radius:50%;background:#51cf66;
+  box-shadow:0 0 10px #51cf66;flex:none;
+}
+.ac-head-sub{
+  font-family:"Inter",system-ui,sans-serif;font-size:.86rem;color:var(--muted);margin:0;
+}
+
+/* Agenten-Auswahl-Tabs + SYNC-Modus (Alle 3) */
+.ac-tabs{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:rgba(255,243,220,.04);padding:5px;border-radius:16px;
+  border:1px solid rgba(255,243,220,.11);
+}
+.ac-tab{
+  all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:12px;
+  font-family:"Inter",system-ui,sans-serif;font-size:.83rem;font-weight:600;
+  color:var(--muted);transition:background .2s,color .2s,border-color .2s,transform .15s;
+  border:1px solid transparent;user-select:none;
+}
+.ac-tab:hover{color:var(--cream);background:rgba(255,243,220,.05)}
+.ac-tab img{width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+.ac-tab[aria-selected="true"]{
+  background:rgba(255,138,31,.16);color:var(--cream);
+  border-color:rgba(255,201,60,.5);box-shadow:0 6px 16px -6px rgba(255,138,31,.38);
+}
+.ac-tab[data-target="kiwi"][aria-selected="true"]{
+  background:rgba(63,163,77,.22);border-color:rgba(105,219,124,.55);
+}
+.ac-tab[data-target="sync"][aria-selected="true"]{
+  background:linear-gradient(135deg,rgba(255,138,31,.24),rgba(63,163,77,.24));
+  border-color:var(--yellow);
+}
+.ac-sync-avatars{
+  display:inline-flex;align-items:center;
+}
+.ac-sync-avatars img{
+  width:20px;height:20px;margin-left:-6px;first-child:margin-left:0;
+}
+.ac-sync-avatars img:first-child{margin-left:0}
+
+/* Chat Body Layout */
+.ac-body{
+  display:grid;grid-template-columns:280px 1fr;min-height:470px;
+}
+.ac-sidebar{
+  border-right:1px solid rgba(255,243,220,.1);padding:20px;
+  display:flex;flex-direction:column;justify-content:space-between;gap:18px;
+  background:rgba(7,22,14,.38);
+}
+.ac-profile{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:16px 12px;border-radius:18px;
+  background:rgba(255,243,220,.035);border:1px solid rgba(255,243,220,.09);
+}
+.ac-prof-ava{
+  width:88px;height:96px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;position:relative;
+}
+.ac-prof-ava img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 16px rgba(0,0,0,.45))}
+.ac-prof-trio{
+  display:none;align-items:center;justify-content:center;gap:2px;width:100%;height:96px;margin-bottom:10px;
+}
+.ac-prof-trio img{width:62px;height:68px;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
+.ac-prof-name{
+  font-family:"Inter",system-ui,sans-serif;font-weight:700;font-size:1.02rem;color:var(--cream);margin:0 0 3px;
+}
+.ac-prof-role{
+  font-family:"Inter",system-ui,sans-serif;font-size:.78rem;color:var(--yellow);font-weight:600;margin:0 0 10px;
+}
+.ac-prof-desc{
+  font-family:"Inter",system-ui,sans-serif;font-size:.79rem;color:#cfe2d5;line-height:1.45;margin:0 0 12px;
+}
+.ac-active-mods{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:5px;width:100%;
+}
+.ac-mod-chip{
+  font-family:"Inter",system-ui,sans-serif;font-size:.68rem;font-weight:600;
+  padding:3px 8px;border-radius:99px;
+  background:rgba(255,243,220,.08);color:var(--cream);border:1px solid rgba(255,243,220,.14);
+}
+.ac-llm-box{
+  display:flex;flex-direction:column;gap:7px;padding:12px;border-radius:14px;
+  background:rgba(255,243,220,.03);border:1px solid rgba(255,243,220,.09);
+  font-family:"Inter",system-ui,sans-serif;
+}
+.ac-llm-lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.ac-llm-select{
+  width:100%;padding:7px 10px;border-radius:9px;
+  background:#0c2a1b;color:var(--cream);border:1px solid rgba(255,243,220,.18);
+  font-family:"Inter",system-ui,sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;
+}
+.ac-llm-select:focus-visible{outline:2px solid var(--yellow)}
+
+/* Haupt-Chat-Fenster */
+.ac-main{
+  display:flex;flex-direction:column;justify-content:space-between;height:500px;
+}
+.ac-messages{
+  flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px;
+  scroll-behavior:smooth;
+}
+.ac-msg{
+  display:flex;align-items:flex-start;gap:12px;max-width:86%;
+  animation:faqOpen .28s cubic-bezier(.2,.8,.2,1) both;
+}
+.ac-msg.user{
+  align-self:flex-end;flex-direction:row-reverse;
+}
+.ac-msg-ava{
+  width:38px;height:38px;border-radius:12px;flex:none;
+  background:rgba(255,243,220,.07);border:1px solid rgba(255,243,220,.15);
+  display:flex;align-items:center;justify-content:center;padding:3px;
+}
+.ac-msg-ava img{width:100%;height:100%;object-fit:contain}
+.ac-msg.user .ac-msg-ava{
+  background:linear-gradient(135deg,var(--orange),var(--yellow));
+  color:#2a1500;font-weight:800;font-size:.78rem;font-family:"Inter",system-ui,sans-serif;
+}
+.ac-msg-bubble{
+  padding:12px 16px;border-radius:16px;
+  background:rgba(255,243,220,.06);border:1px solid rgba(255,243,220,.12);
+  font-family:"Inter",system-ui,sans-serif;font-size:.9rem;line-height:1.52;color:var(--cream);
+}
+.ac-msg.user .ac-msg-bubble{
+  background:linear-gradient(135deg,rgba(255,138,31,.24),rgba(255,201,60,.16));
+  border-color:rgba(255,201,60,.42);
+}
+.ac-msg-meta{
+  display:flex;align-items:center;gap:8px;margin-bottom:4px;
+  font-size:.73rem;font-weight:700;color:var(--yellow);
+}
+.ac-msg-meta span.role-tag{
+  font-weight:500;color:var(--muted);font-size:.7rem;
+}
+.ac-msg[data-sender="kiwi"] .ac-msg-meta{color:#8ce99a}
+.ac-msg[data-sender="mango"] .ac-msg-meta{color:#ffd43b}
+.ac-tool-call{
+  display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+  padding:4px 10px;border-radius:8px;font-size:.74rem;font-weight:600;
+  background:rgba(12,42,27,.75);border:1px solid rgba(255,243,220,.14);color:#cfe2d5;
+}
+.ac-tool-call i{width:6px;height:6px;border-radius:50%;background:var(--orange)}
+
+/* Quick-Prompts & Input-Leiste */
+.ac-Prompts{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:0 24px 10px;
+}
+.ac-prompt-chip{
+  all:unset;cursor:pointer;padding:6px 12px;border-radius:99px;
+  font-family:"Inter",system-ui,sans-serif;font-size:.76rem;font-weight:500;
+  background:rgba(255,243,220,.05);border:1px solid rgba(255,243,220,.13);
+  color:#dcebe1;transition:background .2s,border-color .2s,transform .15s;
+}
+.ac-prompt-chip:hover{
+  background:rgba(255,138,31,.15);border-color:rgba(255,201,60,.5);color:var(--cream);
+  transform:translateY(-1px);
+}
+.ac-input-bar{
+  display:flex;align-items:center;gap:10px;padding:14px 20px;
+  border-top:1px solid rgba(255,243,220,.1);background:rgba(7,22,14,.55);
+}
+.ac-input{
+  all:unset;flex:1;padding:11px 15px;border-radius:12px;
+  background:rgba(255,243,220,.06);border:1px solid rgba(255,243,220,.15);
+  font-family:"Inter",system-ui,sans-serif;font-size:.9rem;color:var(--cream);
+}
+.ac-input::placeholder{color:var(--muted)}
+.ac-input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,138,31,.15)}
+.ac-send-btn{
+  all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  padding:11px 20px;border-radius:12px;
+  font-family:"Inter",system-ui,sans-serif;font-weight:700;font-size:.88rem;
+  color:#2a1500;background:linear-gradient(135deg,var(--orange),var(--yellow));
+  transition:transform .15s,filter .2s;
+}
+.ac-send-btn:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.ac-send-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2.3;fill:none}
+
+@media(max-width:860px){
+  .ac-body{grid-template-columns:1fr}
+  .ac-sidebar{border-right:none;border-bottom:1px solid rgba(255,243,220,.1)}
+  .ac-main{height:440px}
+}
+@media(max-width:560px){
+  .agent-chat-sec{padding:0 16px}
+  .ac-header{padding:18px}
+  .ac-messages{padding:16px}
+  .ac-Prompts{padding:0 16px 10px}
+  .ac-input-bar{padding:12px 14px}
+}
+
+
+.ac-msg-bubble{white-space:pre-wrap;overflow-wrap:anywhere}.ac-main{min-width:0}.ac-msg-bubble img{max-height:240px;border-radius:12px}.ac-msg-bubble video{max-width:100%;max-height:240px}#model-status{font-size:11px;color:var(--muted)}button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Application viewport: retain the supplied visual language without the demo frame. */
+html,body{height:100%;min-height:0;overflow:hidden}
+.agent-chat-sec{max-width:none;margin:0;padding:0;height:100dvh;min-height:0}
+.agent-chat-shell{height:100%;border-radius:0;border:0;box-shadow:none;display:flex;flex-direction:column;min-height:0}
+.ac-header{padding:14px 20px;flex:none;min-width:0}
+.ac-body{flex:1;min-height:0;overflow:hidden;grid-template-columns:260px minmax(0,1fr)}
+.ac-sidebar{min-height:0;overflow-y:auto}
+.ac-main{height:100%;min-height:0;overflow:hidden}
+.ac-messages{flex:1;min-height:0;overflow-y:auto}
+.ac-input-bar,.ac-Prompts,#workspace-tools,#workspace-attachments{flex-shrink:0}
+@media(max-width:760px){.ac-body{grid-template-columns:1fr;display:flex;flex-direction:column}.ac-sidebar{padding:10px 14px;display:flex;gap:12px;overflow:visible;flex:none}.ac-profile{display:none}.ac-llm-box{width:100%;padding:0;margin:0}.ac-main{flex:1;min-height:0}.ac-header{padding:10px}.ac-tabs{width:100%;justify-content:space-between}.ac-tab{padding:8px;font-size:.75rem}.ac-Prompts{display:none}#workspace-tools{padding:8px!important;gap:4px!important}.ac-prompt-chip{font-size:.7rem}.ac-input-bar{padding:10px;gap:6px}.ac-send-btn{padding:12px}.ac-input{min-width:0}}
+</style>
+</head>
+<body>
+<div class="langbar"><div role="group" aria-label="Sprache / Language"><button type="button" data-set="de">DE</button><button type="button" data-set="en">EN</button></div></div>
+<!-- === INTERAKTIVER MULTI-AGENTEN CHAT (PAPAYA, MANGO, KIWI & SYNC) === -->
+  <section class="agent-chat-sec" id="agent-chat">
+    <div class="agent-chat-shell">
+      <div class="ac-header">
+
+
+        <!-- Auswahl: Papaya | Mango | Kiwi | Sync (Alle 3) -->
+        <div class="ac-tabs" role="tablist" aria-label="KI-Agent auswählen">
+          <button type="button" class="ac-tab" role="tab" data-target="papaya" aria-selected="true">
+            <img data-m="papaya" alt="Papaya">
+            <span>Papaya</span>
+          </button>
+          <button type="button" class="ac-tab" role="tab" data-target="mango" aria-selected="false">
+            <img data-m="mango" alt="Mango">
+            <span>Mango</span>
+          </button>
+          <button type="button" class="ac-tab" role="tab" data-target="kiwi" aria-selected="false">
+            <img data-m="kiwi" alt="Kiwi">
+            <span>Kiwi</span>
+          </button>
+          <button type="button" class="ac-tab" role="tab" data-target="sync" aria-selected="false">
+            <span class="ac-sync-avatars">
+              <img data-m="papaya" alt="">
+              <img data-m="mango" alt="">
+              <img data-m="kiwi" alt="">
+            </span>
+            <span data-i="ch_sync_tab">⚡ Sync (Alle 3)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="ac-body">
+        <!-- Linke Seitenleiste: Aktiver Agent + Aktive Module + Modell-Router -->
+        <aside class="ac-sidebar">
+          <div class="ac-profile">
+            <div class="ac-prof-ava" id="ac-prof-single">
+              <img id="ac-prof-img" data-m="papaya" alt="Aktiver Agent">
+            </div>
+            <div class="ac-prof-trio" id="ac-prof-trio">
+              <img data-m="papaya" alt="Papaya">
+              <img data-m="mango" alt="Mango">
+              <img data-m="kiwi" alt="Kiwi">
+            </div>
+            <h3 class="ac-prof-name" id="ac-prof-name">Papaya</h3>
+            <div class="ac-prof-role" id="ac-prof-role" data-i="ch_p_role">Core Orchestrator · KI</div>
+            <p class="ac-prof-desc" id="ac-prof-desc" data-i="ch_p_desc">Analysiert deinen Screen-Kontext, koordiniert komplexe Aufgaben und verbindet die passenden Tools.</p>
+            <div class="ac-active-mods" id="ac-prof-mods">
+              <span class="ac-mod-chip">Gemini</span>
+              <span class="ac-mod-chip">OpenAI</span>
+              <span class="ac-mod-chip">Claude</span>
+              <span class="ac-mod-chip">Screen-Kontext</span>
+            </div>
+          </div>
+
+          <div class="ac-llm-box">
+            <label class="ac-llm-lbl" for="ac-llm-select" data-i="ch_llm_lbl">Aktives Sprachmodell (Router)</label>
+            <select id="ac-llm-select" class="ac-llm-select"><option value="gemini-3.8-flash">Gemini 3.8 Flash</option><option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option><option value="gemini-flash-latest">Gemini Flash (aktuell)</option></select><small id="model-status" aria-live="polite"></small>
+          </div>
+        </aside>
+
+        <!-- Rechtes Hauptfenster: Nachrichtenverlauf + Schnell-Prompts + Eingabe -->
+        <div class="ac-main">
+          <nav id="workspace-tools" aria-label="Werkzeuge" style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid rgba(255,243,220,.1)"></nav><div class="ac-messages" id="ac-messages" aria-live="polite"></div>
+
+          <div class="ac-Prompts" id="ac-prompts">
+            <button type="button" class="ac-prompt-chip" data-q="Fasse meine ungelesenen WhatsApp- & Gmail-Nachrichten zusammen" data-i="ch_q1">🎧 Nachrichten zusammenfassen</button>
+            <button type="button" class="ac-prompt-chip" data-q="Erstelle eine Checkliste und Wochenziele für den Beta-Launch" data-i="ch_q2">📝 Wochenziele & Checkliste planen</button>
+            <button type="button" class="ac-prompt-chip" data-q="Analysiere meinen aktuellen Screen-Kontext und koordiniere Mango & Kiwi" data-i="ch_q3">⚡ Screen-Kontext & Sync-Workflow</button>
+          </div>
+
+          <div id="workspace-attachments" style="display:flex;gap:8px;padding:0 16px;flex-wrap:wrap"></div><form class="ac-input-bar" id="ac-form" autocomplete="off">
+            <input type="text" id="ac-input" class="ac-input" data-ph="ch_ph" placeholder="Schreibe eine Nachricht an Papaya..." maxlength="32000">
+            <button type="submit" class="ac-send-btn">
+              <span data-i="ch_send">Senden</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+<script src="/agent-workspace-assets.js"></script>
+<script src="/agent-workspace.js"></script>
+</body>
+</html>
