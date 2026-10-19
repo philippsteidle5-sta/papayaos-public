@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Key, Sliders, ExternalLink, AlertTriangle, ShieldCheck, Sparkles, Check, Trash2, Save, Volume2, Play, Loader2, Info } from "lucide-react";
 import { UserRole, ROLE_TIER_DETAILS } from "../rbac";
+import { AccountSecurity } from "./AccountSecurity";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -81,7 +82,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: "Hallo Philipp! N.E.O. Neural Nexus ist online und bereit für deine Befehle.",
+          text: "Hallo! Ich bin bereit. Wobei kann ich dir helfen?",
           voiceId: elevenLabsVoiceId.trim() || "70dzXY4HZleqxYtQr59t",
           customApiKey: elevenLabsKey.trim() || undefined,
         }),
@@ -189,6 +190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Scrollable Content Body - Guaranteed smooth scrolling on laptops & small screens */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-slate-950">
+          <AccountSecurity />
           
           {/* Quota Help Banner */}
           <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 text-xs font-sans text-emerald-200/90 leading-relaxed shadow-inner">

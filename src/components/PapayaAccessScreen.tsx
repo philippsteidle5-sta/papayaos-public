@@ -23,9 +23,7 @@ export function PapayaAccessScreen({ isOpen, onClose, onSuccess, lang = "de" }: 
         const response = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
         const result = response.ok ? await response.json() : null;
         if (!active || !result?.ok || !result.user?.email) return;
-        window.dispatchEvent(new CustomEvent("syntax_auth_state_change"));
-        onSuccess?.(result.user.email, result.user.role);
-        onClose();
+        window.location.assign("/?app=true");
       } catch { /* The document retains its form if session verification fails. */ }
     };
     window.addEventListener("message", handleMessage);

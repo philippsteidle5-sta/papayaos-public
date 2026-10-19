@@ -530,7 +530,7 @@ export const NeoSpeakOverlay: React.FC<NeoSpeakOverlayProps> = ({
 
       if (!decision.isAddressed) {
         // Speech was detected by Far-Field microphone, but NOT addressed to NEO!
-        // Do NOT trigger LLM speech, but show clear HUD feedback so Philipp knows NEO heard it and respected his conversation.
+        // Do NOT trigger LLM speech, but show clear HUD feedback so the user knows NEO heard it and respected his conversation.
         setFilterStatus(`[IGNORIERT: ${decision.reason} • RUFE 'NEO' ODER STELLE EINE FRAGE]`);
         if (filterBannerTimerRef.current) clearTimeout(filterBannerTimerRef.current);
         filterBannerTimerRef.current = setTimeout(() => {
@@ -569,12 +569,12 @@ export const NeoSpeakOverlay: React.FC<NeoSpeakOverlayProps> = ({
               ? "Bahn / ÖPNV"
               : "Auto";
           enhancedPrompt = `[NEO SPEAK MODUS - LIVE SPRACHVERBINDUNG // GOOGLE MAPS ROUTENPLANER]
-Philipp (Boss) sagt: "${cleaned}"
+Der Nutzer sagt: "${cleaned}"
 Du hast den Google Maps Routenplaner für die Strecke von "${routeIntent.origin}" nach "${routeIntent.destination}" (Reisemodus: ${modeLabel}) auf dem Display geöffnet.
 Antworte als loyaler Navigator direkt gesprochen in 1 bis maximal 2 kurzen Sätzen mit geschätzter Entfernung/Fahrzeit und der wichtigsten Route. Verwende keine Markdown-Formatierung (* oder #), keine Rauten und keine Links, sondern puren gesprochenen Text.`;
         } else {
           enhancedPrompt = `[NEO SPEAK MODUS - LIVE SPRACHVERBINDUNG]
-Philipp (Boss) sagt: "${cleaned}"
+Der Nutzer sagt: "${cleaned}"
 Antworte direkt, schlagfertig und loyal in 1 bis maximal 3 gesprochenen Sätzen auf seine Frage oder Aussage. Sei proaktiv und steuere deinen Standpunkt bei. Verwende KEINE Markdown-Sterne (*), keine Rauten (#), keine Aufzählungszeichen und keine Links, sondern puren gesprochenen Text.`;
         }
 
@@ -583,11 +583,11 @@ Antworte direkt, schlagfertig und loyal in 1 bis maximal 3 gesprochenen Sätzen 
           const hasImgs = currentMedia.some((u) => !isVideoUrl(u));
           let mediaContext = "";
           if (hasVids && hasImgs) {
-            mediaContext = `\n[MEDIENANHANG: Philipp hat dir ${currentMedia.length} Mediendateien (Videos und Fotos) übermittelt. Analysiere das Video und die Fotos im Detail.]`;
+            mediaContext = `\n[MEDIENANHANG: Der Nutzer hat dir ${currentMedia.length} Mediendateien (Videos und Fotos) übermittelt. Analysiere das Video und die Fotos im Detail.]`;
           } else if (hasVids) {
-            mediaContext = `\n[MEDIENANHANG: Philipp hat dir ${currentMedia.length > 1 ? currentMedia.length + " Video-Clips" : "einen Video-Clip"} übermittelt. Analysiere das Video im Detail bezüglich Handlungen, Szenen, Personen und Inhalten.]`;
+            mediaContext = `\n[MEDIENANHANG: Der Nutzer hat dir ${currentMedia.length > 1 ? currentMedia.length + " Video-Clips" : "einen Video-Clip"} übermittelt. Analysiere das Video im Detail bezüglich Handlungen, Szenen, Personen und Inhalten.]`;
           } else {
-            mediaContext = `\n[MEDIENANHANG: Philipp hat dir ${currentMedia.length > 1 ? currentMedia.length + " Fotos" : "ein Foto"} übermittelt. Analysiere den Bildinhalt im Detail.]`;
+            mediaContext = `\n[MEDIENANHANG: Der Nutzer hat dir ${currentMedia.length > 1 ? currentMedia.length + " Fotos" : "ein Foto"} übermittelt. Analysiere den Bildinhalt im Detail.]`;
           }
           enhancedPrompt += mediaContext;
         }
@@ -1369,7 +1369,7 @@ Antworte direkt, schlagfertig und loyal in 1 bis maximal 3 gesprochenen Sätzen 
         {/* Minimal User Satellite Indicator (Bottom Right Corner) */}
         <div className="absolute bottom-28 sm:bottom-32 right-4 sm:right-12 flex items-center gap-2 px-3 py-1 rounded-full bg-black/70 border border-amber-500/30 backdrop-blur-sm text-[10px] font-mono text-amber-300/80 shadow-[0_0_10px_rgba(245,158,11,0.15)]">
           <span className={`w-1.5 h-1.5 rounded-full ${isMuted ? "bg-zinc-600" : "bg-amber-400"}`} />
-          <span className="font-bold tracking-wider">MIC IN: PHILIPP</span>
+          <span className="font-bold tracking-wider">MIC IN: NUTZER</span>
           <span className="text-[9px] text-zinc-400">({isMuted ? "OFF" : "AKTIV"})</span>
         </div>
       </div>

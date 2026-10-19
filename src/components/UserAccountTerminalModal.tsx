@@ -418,8 +418,8 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    if (newPasswordInput.length < 8) {
-      showToast(lang === "de" ? "Neues Passwort muss mindestens 8 Zeichen haben." : "Password min 8 chars.", "error");
+    if (newPasswordInput.length < 12) {
+      showToast(lang === "de" ? "Neues Passwort muss mindestens 12 Zeichen haben." : "Password min 12 chars.", "error");
       return;
     }
     if (newPasswordInput !== confirmPasswordInput) {
@@ -444,6 +444,7 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
         setCurrentPasswordInput("");
         setNewPasswordInput("");
         setConfirmPasswordInput("");
+        window.location.reload();
       } else {
         showToast(data.message || "Fehler beim Ändern des Passworts.", "error");
       }
@@ -454,14 +455,21 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      if (!response.ok) throw Error('Die Sitzung konnte nicht beendet werden.');
+    } catch {
+      showToast('Abmelden fehlgeschlagen. Bitte erneut versuchen.', 'error');
+      return;
+    }
     setCurrentUserEmail("");
     try {
       localStorage.removeItem("maze_registered_vip_user");
       localStorage.removeItem("maze_current_user_email");
     } catch {}
     onClose();
-    window.location.reload();
+    window.location.assign('/login.html');
   };
 
   return (
@@ -1651,9 +1659,9 @@ export const UserAccountTerminalModal: React.FC<UserAccountTerminalModalProps> =
                     required
                     value={newPasswordInput}
                     onChange={(e) => setNewPasswordInput(e.target.value)}
-                    minLength={8}
+                    minLength={12}
                     maxLength={256}
-                    placeholder="Mindestens 8 Zeichen"
+                    placeholder="Mindestens 12 Zeichen"
                     className={`w-full px-4 py-2.5 rounded-xl text-xs outline-none ${
                       isModern
                         ? "bg-zinc-950 border border-zinc-800 text-white focus:border-red-500"

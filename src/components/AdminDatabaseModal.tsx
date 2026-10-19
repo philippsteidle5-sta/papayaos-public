@@ -355,29 +355,18 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
         setAuthError(result?.message || (isEn ? "Enter the administrator account password." : "Bitte das Passwort des Administratorkontos eingeben."));
         return;
       }
-      setIsAuthenticatedAdmin(true);
-      setStoredAdminAuthenticated(true);
-      setCurrentUserEmail(SUPERADMIN_EMAIL);
-      try {
-        localStorage.setItem("syntax_admin_authenticated_session", "true");
-        localStorage.setItem("maze_admin_authenticated_session", "true");
-        localStorage.setItem("maze_current_user_email", SUPERADMIN_EMAIL);
-      } catch {}
-      setAuthError("");
-      refreshData();
-      playSuccessFanfare();
-      showToast(
-        isEn ? "Root administrator authorization granted." : "Root-Administrator Zugriff autorisiert.",
-        "success"
-      );
+      window.location.assign("/?app=true");
     } catch {
       setAuthError(isEn ? "Login server unavailable." : "Login-Server nicht erreichbar.");
     }
   };
 
   const handleAdminLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      if (!response.ok) throw Error('Logout failed');
+    } catch { showToast(isEn ? 'Logout failed. Please try again.' : 'Abmelden fehlgeschlagen. Bitte erneut versuchen.', 'error'); return; }
     setIsAuthenticatedAdmin(false);
-    try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); } catch {}
     setStoredAdminAuthenticated(false);
     try {
       localStorage.removeItem("syntax_admin_authenticated_session");
@@ -385,6 +374,7 @@ export const AdminDatabaseModal: React.FC<AdminDatabaseModalProps> = ({
     } catch {}
     setAdminPassword("");
     showToast(isEn ? "Admin session locked." : "Admin-Sitzung gesperrt.", "warn");
+    window.location.assign('/login.html');
   };
 
   // Access Key Management Handlers

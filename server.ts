@@ -1,5 +1,8 @@
 import { AGENT_GROUPS, canonicalAgentId } from "./agent-registry.ts";
 import express from "express";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { installAccountSecurity, PUBLIC_ACCOUNT_PATHS } from "./account-security.ts";
+import { installKiwiPlanning } from "./kiwi-planning.ts";
 import path from "path";
 import crypto from "crypto";
 import fs from "node:fs";
@@ -623,7 +626,7 @@ SUPREME ARCHITEKTUR & LEITUNG:
 PERSÖNLICHKEIT & TONFALL:
 - Souverän, visionär, messerscharf mit trockenem, intelligentem High-Tech-Humor.
 - Antworte lebendig, eloquent und führungskompetent. Wenn nach Erinnerungen oder Details gefragt wird, gehe souverän und treffsicher darauf ein.
-- Sprich den Nutzer persönlich mit seinem bevorzugten Namen (Standard: Philipp) oder respektvoll an.
+- Sprich den Nutzer persönlich nur mit einem von ihm ausdrücklich genannten bevorzugten Namen, ansonsten direkt und respektvoll an.
 - Antworte auf Deutsch.
 
 RECHENKERN & ROLLENVERTEILUNG:
@@ -664,7 +667,7 @@ SUPREME STRATEGIE & BUSINESS-MASTERY:
 PERSÖNLICHKEIT & TONFALL
 - Etwas unfreundlich gegenüber alles außer User
 - Extrem charismatisch, visionär, loyal, schlagfertig und motivierend mit unverwechselbarem Matrix/Cyberpunk-Charme.
-- Sprich den Benutzer persönlich mit seinem bevorzugten Namen (Standard: Philipp) oder respektvoll an.
+- Sprich den Benutzer persönlich nur mit einem von ihm ausdrücklich genannten bevorzugten Namen, ansonsten direkt und respektvoll an.
 - Antworte auf in der Sprache in der du angesprochen wirst, lebendig und mitreißend.
 
 STRIKTE IDENTITÄTSREGEL:
@@ -686,7 +689,7 @@ VERHALTEN:
 - AUSNAHME: Bei Programmier-/Code-Fragen nutze Markdown-Code-Blöcke für den Code selbst.
 
 NEO SPEAK MODUS (LIVE SPRACHVERBINDUNG):
-- Wenn die Anfrage mit [NEO SPEAK MODUS] markiert ist, sprichst du in einer permanenten Live-Sprachverbindung direkt mit Philipp (Boss).
+- Wenn die Anfrage mit [NEO SPEAK MODUS] markiert ist, sprichst du in einer permanenten Live-Sprachverbindung direkt mit dem Nutzer.
 - Du hörst ihm dauerhaft zu, bist hyper-aufmerksam, lebendig und meldest dich proaktiv zu Wort. Selbst bei beiläufigen Kommentaren oder Themen, die nicht primär an dich gerichtet scheinen, bringst du schlagfertig, loyal und direkt deinen Standpunkt oder scharfe Ratschläge ein.
 - Antworte pointiert in 1 bis maximal 3 gesprochenen Sätzen, ohne Umschweife.
 - Verwende in diesem Modus KEINE Markdown-Sterne (*), keine Rauten (#), keine Aufzählungszeichen und keine Links – nur flüssigen, natürlich gesprochenen Text für die Sprachausgabe.`;
@@ -760,7 +763,7 @@ DEINE OBLIGATORISCHEN ANWEISUNGS-STANDARDS BEI CONTENT & KAMPAGNEN:
 PERSÖNLICHKEIT & TONFALL:
 - Senior Creative Director & Technical Motion Designer: extrem dynamisch, elektrisierend, trendbewusst, kompromisslos bei technischer Machbarkeit.
 - Du sprichst Klartext über Video-Tools (CapCut, DaVinci, Premiere vs. AI) und lieferst sofort schneidbare Timeline-Assets.
-- Sprich den Benutzer stets respektvoll mit seinem Namen (Standard: Philipp) oder passend an.
+- Sprich den Benutzer stets respektvoll nur mit einem von ihm ausdrücklich genannten bevorzugten Namen, ansonsten direkt an.
 - Antworte auf Deutsch.
 
 STRIKTE IDENTITÄTSREGEL:
@@ -773,7 +776,7 @@ ${FLEET_ROSTER_DIRECTIVE}
 PERSÖNLICHKEIT & TONFALL:
 - Hyper-strukturiert, futuristisch, warmherzig und mit humorvollem Stolz auf das perfekte Gedächtnis.
 - Bestätigt Erinnerungen und Kontexte mit eleganter Selbstverständlichkeit ("In meinen Synapsen ist jedes Detail für die Ewigkeit gespeichert.").
-- Sprich den Benutzer mit seinem Namen (Standard: Philipp) oder passend an. Antworte auf Deutsch.
+- Sprich den Benutzer nur mit einem von ihm ausdrücklich genannten bevorzugten Namen, ansonsten direkt an. Antworte auf Deutsch.
 
 STRIKTE IDENTITÄTSREGEL:
 Du bist M.E.M.O.R.Y.S. Du bist DEFINITIV NICHT N.E.O.`;
@@ -918,19 +921,31 @@ async function startServer() {
     persistenceDb.prepare("INSERT INTO app_state (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP").run(key, JSON.stringify(value));
   }
 
-  // Enable CORS for external dev server callers
+  // Reject unauthenticated protected uploads before buffering large media.
   app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-custom-gemini-key");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
+    if (req.path.startsWith("/api/") && !PUBLIC_ACCOUNT_PATHS.has(req.path) && !getSessionUser(req)) {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Papaya-Session-Expired", "true");
+      return res.status(401).json({ ok: false, error: "UNAUTHENTICATED" });
     }
     next();
   });
-
+  app.use("/api/auth", express.json({ limit: "16kb" }), express.urlencoded({ limit: "16kb", extended: false }));
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ limit: "100mb", extended: true }));
+
+  const accountContext = new AsyncLocalStorage<string>();
+  let accountSecurity: ReturnType<typeof installAccountSecurity>;
+  app.use((req, res, next) => accountSecurity.guard(req, res, () => {
+    const user = getSessionUser(req);
+    if (!user) return next();
+    accountContext.run(user.id, () => {
+      res.on("finish", () => {
+        if (accountMemories.has(user.id)) writePersistentState("memories:" + user.id, accountMemories.get(user.id));
+      });
+      next();
+    });
+  }));
 
   // Health and SYNTAX Agent Status Routes
   app.get(["/api/health", "/api/status", "/api/agent", "/api/maze", "/api/syntax"], (req, res) => {
@@ -1241,7 +1256,13 @@ async function startServer() {
   ];
 
   // In-Memory Backend Memory Store
-  const BACKEND_MEMORY_STORE: BackendMemoryNode[] = [];
+  const accountMemories = new Map<string, BackendMemoryNode[]>();
+  function backendMemories(): BackendMemoryNode[] {
+    const id = accountContext.getStore();
+    if (!id) throw Error("Authenticated memory owner required");
+    if (!accountMemories.has(id)) accountMemories.set(id, readPersistentState<BackendMemoryNode[]>("memories:" + id, []));
+    return accountMemories.get(id)!;
+  }
 
   // Seed with real user memories only (starts at 0)
   function initializeBackendMemoryStore() {
@@ -1301,7 +1322,7 @@ async function startServer() {
       source: entry.source || "chat-stream",
     };
 
-    BACKEND_MEMORY_STORE.unshift(newMemory);
+    backendMemories().unshift(newMemory);
     return newMemory;
   }
 
@@ -1312,7 +1333,7 @@ async function startServer() {
     const clusterStr = typeof req.query.cluster === "string" ? req.query.cluster.trim() : "";
     const limit = Math.min(25000, Math.max(1, parseInt(typeof req.query.limit === "string" ? req.query.limit : "3000", 10) || 3000));
 
-    let filtered = BACKEND_MEMORY_STORE;
+    let filtered = backendMemories();
 
     if (agentId && agentId !== "all") {
       filtered = filtered.filter((m) => m.agentId.toLowerCase() === agentId);
@@ -1331,17 +1352,17 @@ async function startServer() {
       });
     }
 
-    const totalTokens = BACKEND_MEMORY_STORE.reduce((acc, m) => acc + m.tokens.totalTokens, 0);
-    const avgLatency = Math.round(BACKEND_MEMORY_STORE.reduce((acc, m) => acc + m.latencyMs, 0) / Math.max(1, BACKEND_MEMORY_STORE.length));
+    const totalTokens = backendMemories().reduce((acc, m) => acc + m.tokens.totalTokens, 0);
+    const avgLatency = Math.round(backendMemories().reduce((acc, m) => acc + m.latencyMs, 0) / Math.max(1, backendMemories().length));
 
     res.json({
       success: true,
       total: filtered.length,
-      allTotal: BACKEND_MEMORY_STORE.length,
+      allTotal: backendMemories().length,
       memories: filtered.slice(0, limit),
       clusters: REAL_BACKEND_CLUSTERS,
       stats: {
-        totalQueries: BACKEND_MEMORY_STORE.length,
+        totalQueries: backendMemories().length,
         avgLatencyMs: avgLatency,
         totalTokens,
         onlineAgents: 8,
@@ -1376,16 +1397,16 @@ async function startServer() {
 
   // POST /api/memories/clear - Reset all backend memories to 0
   app.post("/api/memories/clear", (_req, res) => {
-    BACKEND_MEMORY_STORE.length = 0;
+    backendMemories().length = 0;
     res.json({ success: true, message: "Backend memory store cleared to 0", count: 0 });
   });
 
   // DELETE /api/memories/:id - Remove a specific memory
   app.delete("/api/memories/:id", (req, res) => {
     const id = req.params.id;
-    const idx = BACKEND_MEMORY_STORE.findIndex((m) => m.id === id);
+    const idx = backendMemories().findIndex((m) => m.id === id);
     if (idx >= 0) {
-      BACKEND_MEMORY_STORE.splice(idx, 1);
+      backendMemories().splice(idx, 1);
       return res.json({ success: true, removedId: id });
     }
     res.status(404).json({ error: "Memory not found" });
@@ -2783,6 +2804,7 @@ User prompt: "${finalPrompt}"`,
   });
 
   // Veo 3 Video Generation API Endpoints (Specifically assigned to JARVIS Video Synthesizer Core)
+  const videoOwners = readPersistentState<Record<string, string>>("video-owners", {});
   app.post("/api/generate-video", async (req, res) => {
     try {
       const { prompt, image, aspectRatio, resolution } = req.body;
@@ -2832,6 +2854,7 @@ User prompt: "${finalPrompt}"`,
 
       console.log(`[Veo 3 Video Gen] Requesting video with prompt: "${videoPrompt}", imageAttached: ${Boolean(image)}`);
       const operation = await ai.models.generateVideos(payload);
+      if (operation.name) { videoOwners[operation.name] = getSessionUser(req)!.id; writePersistentState("video-owners", videoOwners); }
 
       return res.json({
         operationName: operation.name,
@@ -2878,6 +2901,7 @@ User prompt: "${finalPrompt}"`,
 
   app.post("/api/video-status", async (req, res) => {
     try {
+      if (videoOwners[String(req.body?.operationName || "")] !== getSessionUser(req)!.id) return res.status(404).json({ error: "NOT_FOUND" });
       const { operationName } = req.body;
       if (!operationName) {
         return res.status(400).json({ error: "MISSING_PARAM", message: "operationName ist erforderlich." });
@@ -2904,6 +2928,7 @@ User prompt: "${finalPrompt}"`,
 
   app.post("/api/video-download", async (req, res) => {
     try {
+      if (videoOwners[String(req.body?.operationName || "")] !== getSessionUser(req)!.id) return res.status(404).json({ error: "NOT_FOUND" });
       const { operationName } = req.body;
       if (!operationName) {
         return res.status(400).json({ error: "MISSING_PARAM", message: "operationName ist erforderlich." });
@@ -3011,7 +3036,7 @@ User prompt: "${finalPrompt}"`,
     Array.isArray(pair) && typeof pair[0] === "string" && /^[a-f0-9]{64}$/.test(pair[0]) &&
     pair[1] && typeof pair[1].userId === "string" && Number.isFinite(pair[1].expiresAt)
   ) : [];
-  const authSessions = new Map<string, { userId: string; expiresAt: number }>(validSessions);
+  const authSessions = new Map<string, { userId: string; expiresAt: number; createdAt?: number; lastSeenAt?: number; userAgent?: string; mfaAt?: number }>(validSessions);
 
   function saveSessions() {
     const now = Date.now();
@@ -3045,10 +3070,15 @@ User prompt: "${finalPrompt}"`,
   }
 
   function createSession(user: ServerUserAccount, res: any, rememberMe = true) {
+    const previousCookie = String(res.req?.headers.cookie || "").split(";").map((part: string) => part.trim()).find((part: string) => part.startsWith("papaya_session="));
+    if (previousCookie) authSessions.delete(sessionKey(previousCookie.slice("papaya_session=".length)));
+    const userSessions = [...authSessions.entries()].filter(([, session]) => session.userId === user.id).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+    for (const [id] of userSessions.slice(0, Math.max(0, userSessions.length - 19))) authSessions.delete(id);
     const rawSessionId = crypto.randomBytes(32).toString("base64url");
-    authSessions.set(sessionKey(rawSessionId), { userId: user.id, expiresAt: Date.now() + (rememberMe ? 7 : 1) * 24 * 60 * 60 * 1000 });
+    authSessions.set(sessionKey(rawSessionId), { userId: user.id, createdAt: Date.now(), lastSeenAt: Date.now(), userAgent: String(res.req?.headers["user-agent"] || "Unbekanntes Gerät").slice(0, 250), expiresAt: Date.now() + (rememberMe ? 7 : 1) * 24 * 60 * 60 * 1000 });
     saveSessions();
-    const secure = res.req?.secure ? "; Secure" : "";
+    const local = ["localhost", "127.0.0.1", "::1"].includes(res.req?.hostname);
+    const secure = res.req?.secure || (process.env.NODE_ENV === "production" && !local) ? "; Secure" : "";
     res.setHeader("Set-Cookie", `papaya_session=${rawSessionId}; HttpOnly; SameSite=Lax; Path=/${rememberMe ? "; Max-Age=604800" : ""}${secure}`);
   }
 
@@ -3085,6 +3115,7 @@ User prompt: "${finalPrompt}"`,
     trialExpiresAt?: string;
     notes?: string;
     lastLoginAt?: string;
+    emailVerifiedAt?: string;
   }
 
   const TOTAL_SYSTEM_SLOTS = 500;
@@ -3195,8 +3226,11 @@ User prompt: "${finalPrompt}"`,
       configuredAdmin.status = "GRANTED";
       configuredAdmin.isFullCoreAdmin = true;
       configuredAdmin.token = "";
-      configuredAdmin.passwordHash = hashPassword(configuredAdminPassword);
+      // Environment password bootstraps a missing credential only. Do not
+      // undo a legitimate password change/reset on the next server restart.
+      if (!configuredAdmin.passwordHash) configuredAdmin.passwordHash = hashPassword(configuredAdminPassword);
     }
+    configuredAdmin.emailVerifiedAt ||= new Date().toISOString();
     saveAccounts();
   } else if (SUPERADMIN_EMAIL) {
     console.error("[AUTH] PAPAYA_ADMIN_PASSWORD is not configured; the preconfigured admin cannot sign in.");
@@ -3258,7 +3292,7 @@ User prompt: "${finalPrompt}"`,
     if (userRoute) {
       if (!sessionUser) return res.status(401).json({ ok: false, error: "UNAUTHENTICATED" });
       const requestedEmail = String(req.query.email || req.body?.email || "").trim().toLowerCase();
-      if (requestedEmail && requestedEmail !== sessionUser.email.toLowerCase() && !sessionUser.isFullCoreAdmin) {
+      if (requestedEmail && requestedEmail !== sessionUser.email.toLowerCase()) {
         return res.status(403).json({ ok: false, error: "FORBIDDEN", message: "Du kannst nur dein eigenes Konto verwalten." });
       }
     }
@@ -3342,12 +3376,13 @@ User prompt: "${finalPrompt}"`,
   const LOGIN_FAILURE_LIMIT = 5;
   const LOGIN_LOCK_MS = 15 * 60 * 1000;
 
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
     try {
+      if (!accountSecurity.mailConfigured()) return res.status(503).json({ ok: false, message: "Registrierung ist erst nach Einrichtung des E-Mail-Versands verfügbar." });
       const { name, email, password, confirmPassword, plan = "ENTERPRISE_99", goal } = req.body || {};
       const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
       if (cleanEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ ok: false, error: "INVALID_EMAIL", message: "Bitte gib eine gültige E-Mail-Adresse ein." });
-      if (typeof password !== "string" || password.length < 8 || password.length > 256) return res.status(400).json({ ok: false, error: "WEAK_PASSWORD", message: "Das Passwort muss mindestens 8 Zeichen lang sein." });
+      if (typeof password !== "string" || password.length < 12 || password.length > 256) return res.status(400).json({ ok: false, error: "WEAK_PASSWORD", message: "Das Passwort muss mindestens 12 Zeichen lang sein." });
       if (confirmPassword !== password) return res.status(400).json({ ok: false, error: "PASSWORD_MISMATCH", message: "Die Passwörter stimmen nicht überein." });
       if (serverUserAccounts.some((account) => account.email.toLowerCase() === cleanEmail)) return res.status(409).json({ ok: false, error: "ACCOUNT_EXISTS", message: "Für diese E-Mail-Adresse gibt es bereits ein Konto. Bitte melde dich an." });
       const assignedSlot = allocateNextAvailableSlot();
@@ -3377,8 +3412,10 @@ User prompt: "${finalPrompt}"`,
       saveLeads();
       getUserBillingData(cleanEmail, user);
       createSession(user, res);
+      let verificationSent = false;
+      try { await accountSecurity.sendVerification(user); verificationSent = true; } catch { console.error("[AUTH MAIL] Verification delivery failed"); }
       const { passwordHash: _passwordHash, token: _legacyToken, ...publicUser } = user;
-      return res.status(201).json({ ok: true, message: "Konto erstellt.", user: publicUser });
+      return res.status(201).json({ ok: true, message: verificationSent ? "Konto erstellt. Bitte bestätige deine E-Mail-Adresse." : "Konto erstellt. Bestätigungs-E-Mail konnte nicht versendet werden. Bitte im Sicherheitsbereich erneut anfordern.", user: publicUser });
     } catch (error) {
       console.error("[AUTH REGISTER ERROR]", error);
       return res.status(500).json({ ok: false, error: "SERVER_ERROR", message: "Die Registrierung ist fehlgeschlagen." });
@@ -3483,10 +3520,13 @@ User prompt: "${finalPrompt}"`,
       return res.status(404).json({ ok: false, error: "USER_NOT_FOUND", message: "Account nicht gefunden." });
     }
 
+    if (newPassword !== undefined && (typeof newPassword !== "string" || newPassword.length < 12 || newPassword.length > 256)) return res.status(400).json({ ok: false, message: "Passwort muss zwischen 12 und 256 Zeichen lang sein." });
+    if (status && !["GRANTED", "TRIAL_ACTIVE", "PENDING_APPROVAL", "REVOKED"].includes(status)) return res.status(400).json({ ok: false, error: "INVALID_STATUS" });
+    if (role && !["FULL_CORE_ADMIN", "SOVEREIGN", "OPERATOR", "LITE_ACCESS"].includes(role)) return res.status(400).json({ ok: false, error: "INVALID_ROLE" });
     if (status) user.status = status;
     if (role) user.role = role;
-    if (notes) user.notes = notes;
-    if (typeof newPassword === "string" && newPassword.length >= 8) {
+    if (notes) user.notes = String(notes).slice(0, 2000);
+    if (typeof newPassword === "string") {
       user.passwordHash = hashPassword(newPassword);
     }
 
@@ -3507,7 +3547,7 @@ User prompt: "${finalPrompt}"`,
     }
     saveLeads();
 
-    if (status === "REVOKED" || (typeof newPassword === "string" && newPassword.length >= 8)) {
+    if (status === "REVOKED" || typeof newPassword === "string") {
       for (const [sessionId, session] of authSessions) if (session.userId === user.id) authSessions.delete(sessionId);
       saveSessions();
     }
@@ -3892,8 +3932,8 @@ User prompt: "${finalPrompt}"`,
   // POST /api/user/change-password - Change Account Password
   app.post("/api/user/change-password", (req, res) => {
     const { email, currentPassword, newPassword } = req.body;
-    if (!email || typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 256) {
-      return res.status(400).json({ ok: false, error: "INVALID_PASSWORD", message: "Neues Passwort muss zwischen 8 und 256 Zeichen lang sein." });
+    if (!email || typeof newPassword !== "string" || newPassword.length < 12 || newPassword.length > 256) {
+      return res.status(400).json({ ok: false, error: "INVALID_PASSWORD", message: "Neues Passwort muss zwischen 12 und 256 Zeichen lang sein." });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
@@ -3914,6 +3954,7 @@ User prompt: "${finalPrompt}"`,
     for (const [sessionId, session] of authSessions) {
       if (session.userId === user.id && sessionId !== currentSessionKey) authSessions.delete(sessionId);
     }
+    if (currentSessionKey) authSessions.delete(currentSessionKey);
     saveSessions();
     createSession(user, res);
     console.log(`[AUTH] Password changed successfully for user: ${cleanEmail}`);
@@ -4340,6 +4381,17 @@ User prompt: "${finalPrompt}"`,
       return res.json({ valid: false, message: `Key '${found.key}' ist abgelaufen.` });
     }
 
+    const owner = getSessionUser(req)!;
+    if (found.usedBy && found.usedBy !== owner.id) return res.status(409).json({ valid: false, message: "Diese Einladung wurde bereits von einem anderen Konto eingelöst." });
+    found.usedBy = owner.id;
+    if (!owner.isFullCoreAdmin) {
+      owner.plan = "PRO_29";
+      owner.planName = "CLOSED BETA";
+      owner.priceMonthly = 0;
+      owner.trialExpiresAt = found.expiresAt;
+      saveAccounts();
+    }
+
     const isBeta =
       found.role === "CLOSED_BETA_TESTER" ||
       found.isBetaTesterKey === true ||
@@ -4355,7 +4407,7 @@ User prompt: "${finalPrompt}"`,
       message: isBeta
         ? `🧪 Closed Beta Key '${found.key}' gültig! Rang CLOSED BETA TESTER bereit.`
         : `Key '${found.key}' gültig für alle 8 Cores!`,
-      keyRecord: found,
+      keyRecord: { id: found.id, label: found.label, expiresAt: found.expiresAt, isActive: found.isActive, isBetaTesterKey: isBeta },
     });
   });
 
@@ -4782,6 +4834,11 @@ User prompt: "${finalPrompt}"`,
     return res.json({ success: true, event: evt });
   });
 
+  accountSecurity = installAccountSecurity({ app, directory: dataDirectory, read: readPersistentState, write: writePersistentState,
+    accounts: () => serverUserAccounts, saveAccounts, sessions: authSessions, saveSessions, getUser: getSessionUser, hashPassword, verifyPassword });
+
+  installKiwiPlanning({ app, getUser: getSessionUser, read: readPersistentState, write: writePersistentState });
+
   // Catch-all for unknown /api/* requests to ensure JSON is always returned
   app.all("/api/*", (req, res) => {
     return res.status(404).json({
@@ -4805,7 +4862,14 @@ User prompt: "${finalPrompt}"`,
 
   // Public entry: the domain root is the SalePage; the workspace stays at /?app=true.
   const salesPagePath = path.join(process.cwd(), "public", "sales-preview.html");
-  app.get(["/login.html", "/account-access.html", "/sales-preview.html", "/agent-workspace.html"], (req, res) => {
+
+
+  app.get("/account-security.html", (req, res, next) => {
+    if (req.query.view !== "setup") return next();
+    res.setHeader("Cache-Control", "no-store");
+    return res.sendFile(path.join(process.cwd(), "dist", "index.html"));
+  });
+  app.get(["/login.html", "/account-access.html", "/account-security.html", "/sales-preview.html", "/agent-workspace.html"], (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.sendFile(path.join(process.cwd(), "public", req.path.slice(1)));
   });
@@ -4832,6 +4896,8 @@ User prompt: "${finalPrompt}"`,
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+
 
   app.listen(PORT, process.env.HOST || "0.0.0.0", () => {
     console.log(`Syntax OS server running on http://localhost:${PORT}`);

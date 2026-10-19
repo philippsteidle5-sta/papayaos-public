@@ -123,23 +123,11 @@ body.embedded .field{height:52px}
   f.onsubmit=async function(event){
     event.preventDefault();msg.textContent="";go.disabled=true;go.setAttribute("aria-busy","true");
     try{
-      if(mode==="beta"){
-        var key=betaInput.value.trim();if(!key)throw new Error("Bitte gib deinen Beta-Key ein.");
-        var keyResponse=await fetch("/api/access-keys/validate",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({key:key})});
-        var keyData=await keyResponse.json();if(!keyResponse.ok||keyData.valid!==true||!keyData.keyRecord)throw new Error(keyData.message||"Dieser Beta-Key ist ungültig.");
-        var record=keyData.keyRecord,normalized=record.key.replace(/[\s-]/g,"").toLowerCase(),stored=[];
-        try{stored=JSON.parse(localStorage.getItem("syntax_quantum_access_keys_v2")||"[]");if(!Array.isArray(stored))stored=[]}catch{stored=[]}
-        var localRecord=Object.assign({},record,{usedCount:Math.max(0,Number(record.usedCount||0)-1)}),at=stored.findIndex(function(item){return item.key.replace(/[\s-]/g,"").toLowerCase()===normalized});
-        if(at>=0)stored[at]=localRecord;else stored.unshift(localRecord);localStorage.setItem("syntax_quantum_access_keys_v2",JSON.stringify(stored));
-        var sessionEmail="key_"+normalized+"@syntax.local",role=keyData.isBetaTester?"CLOSED_BETA_TESTER":"SOVEREIGN",token="KEY-"+normalized.toUpperCase()+"-"+Math.random().toString(36).slice(2,6).toUpperCase();
-        localStorage.setItem("syntax_active_redeemed_key",JSON.stringify(record));localStorage.setItem("syntax_current_user_email",sessionEmail);localStorage.setItem("syntax_admin_authenticated_session","false");
-        localStorage.setItem("maze_registered_vip_user",JSON.stringify({name:record.label||"PapayaOS Beta",email:sessionEmail,slot:1,token:token,plan:"ENTERPRISE_99",trialExpiresAt:record.expiresAt,accessKey:record.key,role:role}));
-        msg.style.color="#9be6b1";msg.textContent="Beta-Key bestätigt. Workspace wird geöffnet.";await finishSignIn();return;
-      }
+      if(mode==="beta")throw new Error("Bitte erst mit E-Mail anmelden oder ein Konto erstellen. Deinen Beta-Key löst du danach unter Konto & Sicherheit ein.");
       var em=emailInput.value.trim(),password=passwordInput.value;
       if(!/^\S+@\S+\.\S+$/.test(em))throw new Error("Gib eine gültige E-Mail-Adresse ein.");
       if(!password)throw new Error("Bitte gib dein Passwort ein.");
-      if(mode==="register"&&password.length<8)throw new Error("Das Passwort braucht mindestens 8 Zeichen.");
+      if(mode==="register"&&password.length<12)throw new Error("Das Passwort braucht mindestens 12 Zeichen.");
       if(mode==="register"&&password!==confirmInput.value)throw new Error("Die Passwörter stimmen nicht überein.");
       var payload={email:em,password:password};
       var endpoint="/api/auth/login";

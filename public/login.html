@@ -134,7 +134,7 @@ $('f').addEventListener('submit',async function(e){
  }catch(error){m.className='msg';m.textContent=error.name==='AbortError'?(lang==='de'?'Der Server antwortet nicht. Bitte versuche es erneut.':'The server did not respond. Please try again.'):(error.message|| (lang==='de'?'Verbindung fehlgeschlagen.':'Connection failed.'));anim('shake')}
  finally{clearTimeout(timeout);b.disabled=false;b.textContent=T[lang].cta;b.removeAttribute('aria-busy')}
 });
-document.querySelector('a[href="#reset"]').onclick=function(e){e.preventDefault();$('msg').className='msg';$('msg').textContent=lang==='de'?'Bitte wende dich zum Zurücksetzen deines Passworts an den PapayaOS-Administrator.':'Please contact your PapayaOS administrator to reset your password.'};
+document.querySelector('a[href="#reset"]').onclick=function(e){e.preventDefault();location.assign('/account-security.html')};
 var betaLink=document.querySelector('a[href="#beta"]');betaLink.href='/sales-preview.html#waitlist2';betaLink.target='_top';
 var queryLang=new URLSearchParams(location.search).get('lang');if(queryLang==='de'||queryLang==='en')lang=queryLang;
 
